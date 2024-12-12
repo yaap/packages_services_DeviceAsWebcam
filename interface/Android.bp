@@ -1,0 +1,22 @@
+package {
+    default_team: "trendy_team_camera_framework",
+    default_applicable_licenses: ["Android-Apache-2.0"],
+}
+
+android_library {
+    name: "libDeviceAsWebcam",
+    srcs: [
+        "src/**/*.java",
+        "src/**/*.kt",
+    ],
+    static_libs: [
+        "androidx.appcompat_appcompat",
+    ],
+    platform_apis: true,
+    resource_dirs: [
+        "res",
+    ],
+    optimize: {
+        proguard_flags_files: ["proguard.flags"],
+    },
+}

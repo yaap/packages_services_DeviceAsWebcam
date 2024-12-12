@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--  Copyright (C) 2023 The Android Open Source Project
+
+     Licensed under the Apache License, Version 2.0 (the "License");
+     you may not use this file except in compliance with the License.
+     You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+     Unless required by applicable law or agreed to in writing, software
+     distributed under the License is distributed on an "AS IS" BASIS,
+     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     See the License for the specific language governing permissions and
+     limitations under the License.
+ -->
+
+<resources xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+    <string name="app_label" msgid="5357575528456632609">"ৱেবকেম সেৱা"</string>
+    <string name="view_finder_description" msgid="3685544621391457707">"ভিউ ফাইণ্ডাৰ"</string>
+    <string name="zoom_ratio_description" msgid="7895509594054136545">"জুমৰ অনুপাত"</string>
+    <string name="zoom_ratio_button_current_description" msgid="426459536172417249">"বৰ্তমানৰ জুমৰ অনুপাত"</string>
+    <string name="zoom_seek_bar_description" msgid="4729029535436993707">"জুম ছীক বাৰ"</string>
+    <string name="toggle_camera_button_description_back" msgid="6327233207744220545">"পিছফালৰ কেমেৰালৈ সলনি কৰক"</string>
+    <string name="toggle_camera_button_description_front" msgid="4369291922775514034">"সন্মুখৰ কেমেৰালৈ সলনি কৰক"</string>
+    <string name="toggle_high_quality_description_off" msgid="8625616955942340072">"উচ্চ গুণগত মান অফ কৰক"</string>
+    <string name="toggle_high_quality_description_on" msgid="2927400982468646409">"উচ্চ গুণগত মান অন কৰক"</string>
+    <string name="hq_warning_dialog_title" msgid="2219475457173758785">"উচ্চ গুণগত মানৰ ম’ড"</string>
+    <string name="hq_warning_dialog_content_1" msgid="4522581741851657138">"উচ্চ গুণগত মানৰ ম’ডে ৱেবকেমৰ মান উন্নত কৰিবলৈ পাৱাৰ অপ্টিমাইজেশ্বন অক্ষম কৰে। এই ম’ড ব্যৱহাৰ কৰাৰ ফলত উল্লেখযোগ্যভাৱে পাৱাৰ আহৰণ কৰা হ’ব পাৰে যি ডিভাইচটো গৰম কৰি তুলিব পাৰে।"</string>
+    <string name="hq_warning_dialog_content_2" msgid="3916465225973908142"><b><u>"সকীয়নি:"</u></b>" উচ্চ তাপমানত দীঘলীয়া সময় ধৰি একেৰাহে ব্যৱহাৰ কৰিলে এই ডিভাইচটোৰ দীৰ্ঘম্যাদী বেটাৰীৰ স্বাস্থ্যৰ ওপৰত বিৰূপ প্ৰভাৱ পৰিব পাৰে।"</string>
+    <string name="hq_warning_dialog_dont_show_again" msgid="7673771228725839758">"পুনৰাই নেদেখুৱাব"</string>
+    <string name="hq_warning_dialog_button_ack" msgid="613756451667553632">"স্বীকাৰ কৰক"</string>
+    <string name="prefs_file_name" msgid="1594472134069722000">"com.android.DeviceAsWebcam.user.prefs"</string>
+    <string name="prefs_camera_id_key" msgid="5865987824227186440">"camera.id"</string>
+    <string name="prefs_back_camera_id_key" msgid="2529978796301129676">"back.camera.id"</string>
+    <string name="prefs_front_camera_id_key" msgid="5008356857509132687">"front.camera.id"</string>
+    <string name="prefs_zoom_ratio_key" msgid="5198404806322533867">"zoom.ratio.%s"</string>
+    <string name="prefs_high_quality_mode_enabled" msgid="6399835233745563577">"high.quality.mode.enabled"</string>
+    <string name="prefs_high_quality_warning_enabled" msgid="3869127585273122773">"উচ্চ গুণগত মানৰ সকীয়নি সক্ষম কৰা হৈছে"</string>
+    <string name="list_item_text_back_camera" msgid="3350389854150173621">"পিছফালৰ কেমেৰা"</string>
+    <string name="list_item_text_front_camera" msgid="3031661498601814899">"সন্মুখৰ কেমেৰা"</string>
+    <string name="list_item_text_standard_camera" msgid="2095831547376259596">"মানক কেমেৰা"</string>
+    <string name="list_item_text_wide_angle_camera" msgid="532663305355107401">"ৱাইড এংগল কেমেৰা"</string>
+    <string name="list_item_text_ultra_wide_camera" msgid="5380279036978513342">"আল্ট্ৰা ৱাইড কেমেৰা"</string>
+    <string name="list_item_text_telephoto_camera" msgid="3876282379838057057">"টেলিফট’ কেমেৰা"</string>
+    <string name="list_item_text_other_camera" msgid="630573588657548196">"অন্য কেমেৰা"</string>
+    <string name="list_item_text_unknown_camera" msgid="2974439335941064529">"অজ্ঞাত কেমেৰা"</string>
+    <string name="camera_options_list_description" msgid="8510354071701517452">"উপলব্ধ কেমেৰাৰ বিকল্পসমূহ"</string>
+</resources>
