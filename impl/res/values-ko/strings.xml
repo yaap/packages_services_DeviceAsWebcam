@@ -30,13 +30,6 @@
     <string name="hq_warning_dialog_content_2" msgid="3916465225973908142"><b><u>"경고:"</u></b>" 과열된 상태로 오래 사용하면 기기의 장기 배터리 성능 상태에 악영향을 미칠 수 있습니다."</string>
     <string name="hq_warning_dialog_dont_show_again" msgid="7673771228725839758">"다시 표시하지 않음"</string>
     <string name="hq_warning_dialog_button_ack" msgid="613756451667553632">"확인"</string>
-    <string name="prefs_file_name" msgid="1594472134069722000">"com.android.DeviceAsWebcam.user.prefs"</string>
-    <string name="prefs_camera_id_key" msgid="5865987824227186440">"camera.id"</string>
-    <string name="prefs_back_camera_id_key" msgid="2529978796301129676">"back.camera.id"</string>
-    <string name="prefs_front_camera_id_key" msgid="5008356857509132687">"front.camera.id"</string>
-    <string name="prefs_zoom_ratio_key" msgid="5198404806322533867">"zoom.ratio.%s"</string>
-    <string name="prefs_high_quality_mode_enabled" msgid="6399835233745563577">"high.quality.mode.enabled"</string>
-    <string name="prefs_high_quality_warning_enabled" msgid="3869127585273122773">"고화질.경고.사용.설정됨"</string>
     <string name="list_item_text_back_camera" msgid="3350389854150173621">"후면 카메라"</string>
     <string name="list_item_text_front_camera" msgid="3031661498601814899">"전면 카메라"</string>
     <string name="list_item_text_standard_camera" msgid="2095831547376259596">"일반 카메라"</string>

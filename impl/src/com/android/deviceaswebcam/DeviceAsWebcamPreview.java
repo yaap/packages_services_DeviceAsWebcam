@@ -70,7 +70,6 @@ import androidx.window.layout.WindowMetrics;
 import androidx.window.layout.WindowMetricsCalculator;
 
 import com.android.DeviceAsWebcam.R;
-import com.android.deviceaswebcam.flags.Flags;
 import com.android.deviceaswebcam.utils.UserPrefs;
 import com.android.deviceaswebcam.view.CameraPickerDialog;
 import com.android.deviceaswebcam.view.ZoomController;
@@ -650,10 +649,6 @@ public class DeviceAsWebcamPreview extends FragmentActivity {
             runOnUiThread(this::setupMainLayout);
             return WindowInsets.CONSUMED;
         });
-
-        if (!Flags.highQualityToggle()) {
-            mHighQualityToggleButton.setVisibility(View.GONE);
-        }
 
         bindService(
                 new Intent(this, DeviceAsWebcamFgServiceImpl.class),

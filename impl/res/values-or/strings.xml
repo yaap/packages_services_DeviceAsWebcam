@@ -30,13 +30,6 @@
     <string name="hq_warning_dialog_content_2" msgid="3916465225973908142"><b><u>"ଚେତାବନୀ:"</u></b>" ଉଚ୍ଚ ତାପମାତ୍ରାରେ ଅଧିକ ସମୟ ପର୍ଯ୍ୟନ୍ତ ବ୍ୟବହାର ଏହି ଡିଭାଇସର ଦୀର୍ଘକାଳୀନ ବେଟେରୀ ହେଲ୍ଥ ଉପରେ ପ୍ରତିକୂଳ ପ୍ରଭାବ ପକାଇପାରେ।"</string>
     <string name="hq_warning_dialog_dont_show_again" msgid="7673771228725839758">"ପୁଣି ଦେଖାନ୍ତୁ ନାହିଁ"</string>
     <string name="hq_warning_dialog_button_ack" msgid="613756451667553632">"ସ୍ୱୀକାର କରନ୍ତୁ"</string>
-    <string name="prefs_file_name" msgid="1594472134069722000">"com.android.DeviceAsWebcam.user.prefs"</string>
-    <string name="prefs_camera_id_key" msgid="5865987824227186440">"camera.id"</string>
-    <string name="prefs_back_camera_id_key" msgid="2529978796301129676">"back.camera.id"</string>
-    <string name="prefs_front_camera_id_key" msgid="5008356857509132687">"front.camera.id"</string>
-    <string name="prefs_zoom_ratio_key" msgid="5198404806322533867">"zoom.ratio.%s"</string>
-    <string name="prefs_high_quality_mode_enabled" msgid="6399835233745563577">"high.quality.mode.enabled"</string>
-    <string name="prefs_high_quality_warning_enabled" msgid="3869127585273122773">"ଉଚ୍ଚ.ଗୁଣବତ୍ତା.ଚେତାବନୀ.ସକ୍ଷମ କରାଯାଇଛି"</string>
     <string name="list_item_text_back_camera" msgid="3350389854150173621">"ପଛ କେମେରା"</string>
     <string name="list_item_text_front_camera" msgid="3031661498601814899">"ସାମ୍ନା କେମେରା"</string>
     <string name="list_item_text_standard_camera" msgid="2095831547376259596">"ଷ୍ଟାଣ୍ଡାର୍ଡ କେମେରା"</string>

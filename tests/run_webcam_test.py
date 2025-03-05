@@ -31,7 +31,9 @@ class DeviceAsWebcamTest(base_test.BaseTestClass):
   _ACTION_WEBCAM_RESULT = 'com.android.cts.verifier.camera.webcam.ACTION_WEBCAM_RESULT'
   _WEBCAM_RESULTS = 'camera.webcam.extra.RESULTS'
   _WEBCAM_TEST_ACTIVITY = 'com.android.cts.verifier/.camera.webcam.WebcamTestActivity'
-  _DAC_PREVIEW_ACTIVITY = 'com.android.DeviceAsWebcam/.DeviceAsWebcamPreview'
+  # TODO(373791776): Find a way to discover PreviewActivity for vendors that change
+  # the webcam service.
+  _DAC_PREVIEW_ACTIVITY = 'com.android.DeviceAsWebcam/com.android.deviceaswebcam.DeviceAsWebcamPreview'
   _ACTIVITY_START_WAIT = 1.5  # seconds
   _ADB_RESTART_WAIT = 9  # seconds
   _FPS_TOLERANCE = 0.15 # 15 percent

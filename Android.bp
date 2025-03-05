@@ -10,10 +10,14 @@ aconfig_declarations {
     srcs: ["device_as_webcam.aconfig"],
 }
 
-java_aconfig_library {
-    name: "device_as_webcam_flags_java_lib",
-    aconfig_declarations: "device_as_webcam_flags",
-}
+// Re-enable when adding flags.
+// Also add as a dependency to DeviceAsWebcam or libDeviceAsWebcam
+// as needed.
+//
+// java_aconfig_library {
+//     name: "device_as_webcam_flags_java_lib",
+//     aconfig_declarations: "device_as_webcam_flags",
+// }
 
 genrule {
     name: "camera-webcam-test",

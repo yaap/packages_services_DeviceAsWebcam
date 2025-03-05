@@ -41,12 +41,15 @@ public abstract class DeviceAsWebcamReceiver extends BroadcastReceiver {
     public final void onReceive(Context context, Intent intent) {
         final String action = intent.getAction();
         Bundle extras = intent.getExtras();
+        if (extras == null) {
+            return;
+        }
         boolean uvcSelected = extras.getBoolean(UsbManager.USB_FUNCTION_UVC);
         if (VERBOSE) {
             Log.v(TAG, "Got broadcast with extras" + extras);
         }
         if (!UsbManager.isUvcSupportEnabled()) {
-            Log.e(TAG, "UVC support isn't enabled, why do we have DeviceAsWebcam installed ?");
+            Log.i(TAG, "UVC support isn't enabled. Returning early.");
             return;
         }
         if (UsbManager.ACTION_USB_STATE.equals(action) && uvcSelected) {

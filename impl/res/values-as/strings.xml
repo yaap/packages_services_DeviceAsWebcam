@@ -30,13 +30,6 @@
     <string name="hq_warning_dialog_content_2" msgid="3916465225973908142"><b><u>"সকীয়নি:"</u></b>" উচ্চ তাপমানত দীঘলীয়া সময় ধৰি একেৰাহে ব্যৱহাৰ কৰিলে এই ডিভাইচটোৰ দীৰ্ঘম্যাদী বেটাৰীৰ স্বাস্থ্যৰ ওপৰত বিৰূপ প্ৰভাৱ পৰিব পাৰে।"</string>
     <string name="hq_warning_dialog_dont_show_again" msgid="7673771228725839758">"পুনৰাই নেদেখুৱাব"</string>
     <string name="hq_warning_dialog_button_ack" msgid="613756451667553632">"স্বীকাৰ কৰক"</string>
-    <string name="prefs_file_name" msgid="1594472134069722000">"com.android.DeviceAsWebcam.user.prefs"</string>
-    <string name="prefs_camera_id_key" msgid="5865987824227186440">"camera.id"</string>
-    <string name="prefs_back_camera_id_key" msgid="2529978796301129676">"back.camera.id"</string>
-    <string name="prefs_front_camera_id_key" msgid="5008356857509132687">"front.camera.id"</string>
-    <string name="prefs_zoom_ratio_key" msgid="5198404806322533867">"zoom.ratio.%s"</string>
-    <string name="prefs_high_quality_mode_enabled" msgid="6399835233745563577">"high.quality.mode.enabled"</string>
-    <string name="prefs_high_quality_warning_enabled" msgid="3869127585273122773">"উচ্চ গুণগত মানৰ সকীয়নি সক্ষম কৰা হৈছে"</string>
     <string name="list_item_text_back_camera" msgid="3350389854150173621">"পিছফালৰ কেমেৰা"</string>
     <string name="list_item_text_front_camera" msgid="3031661498601814899">"সন্মুখৰ কেমেৰা"</string>
     <string name="list_item_text_standard_camera" msgid="2095831547376259596">"মানক কেমেৰা"</string>
