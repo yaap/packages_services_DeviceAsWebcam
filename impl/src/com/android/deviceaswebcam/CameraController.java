@@ -20,6 +20,7 @@ import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
+import android.graphics.ImageFormat;
 import android.graphics.Matrix;
 import android.graphics.Point;
 import android.graphics.Rect;
@@ -685,11 +686,12 @@ public class CameraController {
                 if (mImgReader != null) {
                     mImgReader.close();
                 }
-                mImgReader = new ImageReader.Builder(width, height)
-                        .setMaxImages(MAX_BUFFERS)
-                        .setDefaultHardwareBufferFormat(HardwareBuffer.YCBCR_420_888)
-                        .setUsage(usage)
-                        .build();
+                mImgReader =
+                        new ImageReader.Builder(width, height)
+                                .setMaxImages(MAX_BUFFERS)
+                                .setImageFormat(ImageFormat.YUV_420_888)
+                                .setUsage(usage)
+                                .build();
                 mImgReader.setOnImageAvailableListener(mOnImageAvailableListener,
                         mImageReaderHandler);
             }
