@@ -16,7 +16,7 @@
 
 <resources xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    <string name="app_label" msgid="5357575528456632609">"سرویس وب‌بین"</string>
+    <string name="app_label" msgid="5357575528456632609">"سرویس وب‌کم"</string>
     <string name="view_finder_description" msgid="3685544621391457707">"نمایاب"</string>
     <string name="zoom_ratio_description" msgid="7895509594054136545">"نسبت بزرگ‌نمایی"</string>
     <string name="zoom_ratio_button_current_description" msgid="426459536172417249">"نسبت بزرگ‌نمایی کنونی"</string>
@@ -26,7 +26,7 @@
     <string name="toggle_high_quality_description_off" msgid="8625616955942340072">"خاموش کردن کیفیت بالا"</string>
     <string name="toggle_high_quality_description_on" msgid="2927400982468646409">"روشن کردن کیفیت بالا"</string>
     <string name="hq_warning_dialog_title" msgid="2219475457173758785">"حالت کیفیت بالا"</string>
-    <string name="hq_warning_dialog_content_1" msgid="4522581741851657138">"«حالت کیفیت بالا» بهینه‌سازی نیرو را برای بهبود کیفیت وب‌بین غیرفعال می‌کند. استفاده از این حالت ممکن است باعث افزایش قابل‌توجه مصرف باتری شود که می‌تواند منجر به گرم شدن دستگاه شود."</string>
+    <string name="hq_warning_dialog_content_1" msgid="4522581741851657138">"«حالت کیفیت بالا» بهینه‌سازی نیرو را برای بهبود کیفیت وب‌کم غیرفعال می‌کند. استفاده از این حالت ممکن است باعث افزایش قابل‌توجه مصرف باتری شود که می‌تواند منجر به گرم شدن دستگاه شود."</string>
     <string name="hq_warning_dialog_content_2" msgid="3916465225973908142"><b><u>"هشدار:"</u></b>" استفاده طولانی‌مدت در دماهای بالا ممکن است تأثیر نامطلوب بر سلامت باتری این دستگاه داشته باشد."</string>
     <string name="hq_warning_dialog_dont_show_again" msgid="7673771228725839758">"دیگر نشان داده نشود"</string>
     <string name="hq_warning_dialog_button_ack" msgid="613756451667553632">"تصدیق کردن"</string>

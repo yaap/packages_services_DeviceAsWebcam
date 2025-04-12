@@ -17,7 +17,7 @@
 <resources xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     <string name="notif_channel_name" msgid="6360649882588343016">"سرویس پیش‌نما"</string>
-    <string name="notif_ticker" msgid="6915460822395652567">"وب‌بین"</string>
-    <string name="notif_title" msgid="802425098359640082">"وب‌بین"</string>
-    <string name="notif_desc" msgid="2524105328454274946">"برای پیش‌دید کردن و پیکربندی خروجی وب‌بین، تک‌ضرب بزنید"</string>
+    <string name="notif_ticker" msgid="6915460822395652567">"وب‌کم"</string>
+    <string name="notif_title" msgid="802425098359640082">"وب‌کم"</string>
+    <string name="notif_desc" msgid="2524105328454274946">"برای پیش‌دید کردن و پیکربندی خروجی وب‌کم، تک‌ضرب بزنید"</string>
 </resources>
