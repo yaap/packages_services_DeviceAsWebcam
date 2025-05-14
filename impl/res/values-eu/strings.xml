@@ -16,7 +16,7 @@
 
 <resources xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    <string name="app_label" msgid="5357575528456632609">"Web-kameraren zerbitzua"</string>
+    <string name="app_label" msgid="5357575528456632609">"Webcamaren zerbitzua"</string>
     <string name="view_finder_description" msgid="3685544621391457707">"Bisorea"</string>
     <string name="zoom_ratio_description" msgid="7895509594054136545">"Zoomaren erlazioa"</string>
     <string name="zoom_ratio_button_current_description" msgid="426459536172417249">"Zoomaren oraingo erlazioa"</string>
@@ -26,7 +26,7 @@
     <string name="toggle_high_quality_description_off" msgid="8625616955942340072">"Desaktibatu kalitate handiko modua"</string>
     <string name="toggle_high_quality_description_on" msgid="2927400982468646409">"Aktibatu kalitate handiko modua"</string>
     <string name="hq_warning_dialog_title" msgid="2219475457173758785">"Kalitate handiko modua"</string>
-    <string name="hq_warning_dialog_content_1" msgid="4522581741851657138">"Kalitate handiko moduan bateria optimizatzeko eginbideak desgaitzen dira, web-kameraren kalitatea hobetzeko. Modu hori erabiltzen baduzu, baliteke bateria asko erabiltzea eta, ondorioz, gailua berotzea."</string>
+    <string name="hq_warning_dialog_content_1" msgid="4522581741851657138">"Kalitate handiko moduan bateria optimizatzeko eginbideak desgaitzen dira, webcamaren kalitatea hobetzeko. Modu hori erabiltzen baduzu, baliteke bateria asko erabiltzea eta, ondorioz, gailua berotzea."</string>
     <string name="hq_warning_dialog_content_2" msgid="3916465225973908142"><b><u>"ABISUA:"</u></b>" gailua tenperatura altuetan denbora luzez erabiltzeak agian ondorio kaltegarriak izango ditu gailu honen bateriaren epe luzeko egoeran."</string>
     <string name="hq_warning_dialog_dont_show_again" msgid="7673771228725839758">"Ez erakutsi berriro"</string>
     <string name="hq_warning_dialog_button_ack" msgid="613756451667553632">"Aitortu"</string>
