@@ -27,7 +27,7 @@
     <string name="toggle_high_quality_description_on" msgid="2927400982468646409">"高品質スイッチがオンです"</string>
     <string name="hq_warning_dialog_title" msgid="2219475457173758785">"高画質モード"</string>
     <string name="hq_warning_dialog_content_1" msgid="4522581741851657138">"高画質モードでは、ウェブカメラの画質を高めるため電力の最適化が無効になります。このモードを使用すると消費電力が大幅に増える可能性があることから、デバイスが熱くなる場合があります。"</string>
-    <string name="hq_warning_dialog_content_2" msgid="3916465225973908142"><b><u>"警告:"</u></b>" 高い温度で長時間使い続けると、このデバイスの長期的なバッテリーの健全性に悪影響が及ぶことがあります。"</string>
+    <string name="hq_warning_dialog_content_2" msgid="3916465225973908142"><b><u>"警告:"</u></b>" 高い温度で長時間使い続けると、このデバイスの長期的なバッテリー ヘルスに悪影響が及ぶことがあります。"</string>
     <string name="hq_warning_dialog_dont_show_again" msgid="7673771228725839758">"次回から表示しない"</string>
     <string name="hq_warning_dialog_button_ack" msgid="613756451667553632">"承認"</string>
     <string name="list_item_text_back_camera" msgid="3350389854150173621">"背面カメラ"</string>
