@@ -1,8 +1,14 @@
 # Keeps methods that are invoked by JNI.
 
--keep class com.android.deviceaswebcam.annotations.UsedBy*
+# TODO(b/373579455): Evaluate if <init> needs to be kept.
+-keep class com.android.deviceaswebcam.annotations.UsedBy* {
+  void <init>();
+}
 
--keep @com.android.deviceaswebcam.annotations.UsedBy* class *
+# TODO(b/373579455): Evaluate if <init> needs to be kept.
+-keep @com.android.deviceaswebcam.annotations.UsedBy* class * {
+  void <init>();
+}
 -keepclassmembers class * {
   @com.android.deviceaswebcam.annotations.UsedByNative *;
 }
@@ -12,4 +18,3 @@
 -keepclassmembers class * {
   native <methods>;
 }
-

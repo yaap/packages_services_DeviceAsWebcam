@@ -38,13 +38,14 @@
             android:layout_marginTop="16dp"
             android:padding="8dp"
             android:text="@string/hq_warning_dialog_content_1"
+            android:textColor="@android:color/system_accent2_700"
             android:textAppearance="@android:style/TextAppearance.DeviceDefault.Small"/>
-
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:padding="8dp"
             android:text="@string/hq_warning_dialog_content_2"
+            android:textColor="@android:color/system_accent2_700"
             android:textAppearance="@android:style/TextAppearance.DeviceDefault.Small"/>
 
         <CheckBox
@@ -53,6 +54,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
             android:paddingHorizontal="8dp"
+            android:minHeight="48dp"
             android:text="@string/hq_warning_dialog_dont_show_again"
             android:textAppearance="@android:style/TextAppearance.DeviceDefault.Small"/>
 
