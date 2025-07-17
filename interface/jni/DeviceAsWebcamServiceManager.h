@@ -19,6 +19,7 @@
  */
 #pragma once
 #include <jni.h>
+#include <memory>
 #include <mutex>
 #include <thread>
 
