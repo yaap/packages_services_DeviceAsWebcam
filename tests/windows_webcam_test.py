@@ -20,129 +20,129 @@ import cv2
 import device
 
 _FPS_TEST_DURATION = 10  # seconds
-_DEVICE_NAME = 'android' # TODO b/277159494
+_DEVICE_NAME = 'android'  # TODO b/277159494
 _FPS_TO_TEST = [15, 30, 60]  # Since device or cv2 do not retrieve the
-                            # advertised FPS, the test will use these
-                            # values which are known to be supported
+# advertised FPS, the test will use these
+# values which are known to be supported
 
 
 def initialize_device():
-  """Gets the device index of the webcam to be tested.
+    """Gets the device index of the webcam to be tested.
 
-  Returns:
-      Device index of webcam
-  """
-  res_device_index = -1
-  device_name = ''
+    Returns:
+        Device index of webcam
+    """
+    res_device_index = -1
+    device_name = ''
 
-  device_list = device.getDeviceList()
-  for index, camera in enumerate(device_list):
-    if _DEVICE_NAME in camera[0].lower():
-      res_device_index = index
-      device_name = camera[0]
-      break
+    device_list = device.getDeviceList()
+    for index, camera in enumerate(device_list):
+        if _DEVICE_NAME in camera[0].lower():
+            res_device_index = index
+            device_name = camera[0]
+            break
 
-  if res_device_index < 0:
-    logging.error('No device found')
-  else:
-    logging.info('Using webcam: %s', device_name)
+    if res_device_index < 0:
+        logging.error('No device found')
+    else:
+        logging.info('Using webcam: %s', device_name)
 
-  return res_device_index
+    return res_device_index
 
 
 def initialize_resolutions(device_index):
-  """Gets list of supported resolutions from webcam.
+    """Gets list of supported resolutions from webcam.
 
-  Args:
-    device_index: index of device
+    Args:
+      device_index: index of device
 
-  Returns:
-      List of tuples of supported resolutions
-  """
-  device_list = device.getDeviceList()
+    Returns:
+        List of tuples of supported resolutions
+    """
+    device_list = device.getDeviceList()
 
-  res = []
-  if device_list:
-    res = device_list[device_index][1]
+    res = []
+    if device_list:
+        res = device_list[device_index][1]
 
-  return res
+    return res
 
 
 def setup_for_test_fps(dut, supported_resolutions):
-  """Sets up and runs fps testing on device.
+    """Sets up and runs fps testing on device.
 
-  Args:
-      dut: device under test
-      supported_resolutions: supported resolutions on device to be tested
+    Args:
+        dut: device under test
+        supported_resolutions: supported resolutions on device to be tested
 
-  Returns:
-      List of tuples of the fps results, where the first element is the
-      expected and the second element is the actual fps from testing
-  """
-  results = []
+    Returns:
+        List of tuples of the fps results, where the first element is the
+        expected and the second element is the actual fps from testing
+    """
+    results = []
 
-  for current_resolution in supported_resolutions:
-    dut.set(cv2.CAP_PROP_FRAME_WIDTH, current_resolution[0])
-    dut.set(cv2.CAP_PROP_FRAME_HEIGHT, current_resolution[1])
+    for current_resolution in supported_resolutions:
+        dut.set(cv2.CAP_PROP_FRAME_WIDTH, current_resolution[0])
+        dut.set(cv2.CAP_PROP_FRAME_HEIGHT, current_resolution[1])
 
-    for current_fps in _FPS_TO_TEST:
-      dut.set(cv2.CAP_PROP_FPS, current_fps)
+        for current_fps in _FPS_TO_TEST:
+            dut.set(cv2.CAP_PROP_FPS, current_fps)
 
-      results.append((current_fps, test_fps(dut)))
+            results.append((current_fps, test_fps(dut)))
 
-  return results
+    return results
 
 
 def test_fps(dut):
-  """Tests fps on device.
+    """Tests fps on device.
 
-  Args:
-      dut: device under test
+    Args:
+        dut: device under test
 
-  Returns:
-      fps calculated from test
-  """
-  num_frames = dut.get(cv2.CAP_PROP_FPS) * _FPS_TEST_DURATION
+    Returns:
+        fps calculated from test
+    """
+    num_frames = dut.get(cv2.CAP_PROP_FPS) * _FPS_TEST_DURATION
 
-  start_time = time.time()
-  i = num_frames
-  while i > 0:
-    ret = dut.read()
+    start_time = time.time()
+    i = num_frames
+    while i > 0:
+        ret = dut.read()
 
-    if not ret:
-      logging.error('Error while reading frame')
-      break
+        if not ret:
+            logging.error('Error while reading frame')
+            break
 
-    i -= 1
+        i -= 1
 
-  end_time = time.time()
+    end_time = time.time()
 
-  fps = num_frames / (end_time - start_time)
+    fps = num_frames / (end_time - start_time)
 
-  return fps
+    return fps
 
 
 def main():
-  device_index = initialize_device()
+    device_index = initialize_device()
 
-  if device_index < 0:
-    logging.info('Supported device not found!')
-    return []
+    if device_index < 0:
+        logging.info('Supported device not found!')
+        return []
 
-  supported_resolutions = initialize_resolutions(device_index)
+    supported_resolutions = initialize_resolutions(device_index)
 
-  if not supported_resolutions:
-    logging.error('Error retrieving formats and resolutions')
-    return []
+    if not supported_resolutions:
+        logging.error('Error retrieving formats and resolutions')
+        return []
 
-  dut = cv2.VideoCapture(device_index, cv2.CAP_DSHOW)
+    dut = cv2.VideoCapture(device_index, cv2.CAP_DSHOW)
 
-  res = setup_for_test_fps(dut, supported_resolutions)
+    res = setup_for_test_fps(dut, supported_resolutions)
 
-  dut.release()
-  print(res)
-  return res
+    dut.release()
+    print(res)
+    return res
 
 
 if __name__ == '__main__':
-  main()
+    main()
