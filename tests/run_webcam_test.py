@@ -65,7 +65,7 @@ class DeviceAsWebcamTest(base_test.BaseTestClass):
             import linux_webcam_test
 
             logging.info('Starting test on Linux')
-            results = linux_webcam_test.main()
+            results = linux_webcam_test.main(self.dut.serial)
         elif current_os == self._WINDOWS_OS:
             logging.warning(
                 'Webcam test on Windows is decrecated and will be removed '
@@ -99,8 +99,9 @@ class DeviceAsWebcamTest(base_test.BaseTestClass):
         return results
 
     def validate_fps(self, results):
-        """Verifies the webcam FPS falls within the acceptable range of the
+        """Verifies the webcam FPS
 
+        Verifies that the webcam FPS falls within the acceptable range of the
         tested FPS.
 
         Args:
