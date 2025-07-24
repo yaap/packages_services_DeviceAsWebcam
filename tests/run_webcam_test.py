@@ -14,8 +14,8 @@
 """Runs the webcam verification test and reports the result to CTSVerifier"""
 
 import ast
+import io
 import logging
-import os
 import platform
 import subprocess
 import time
@@ -116,18 +116,6 @@ class DeviceAsWebcamTest(base_test.BaseTestClass):
 
         return result
 
-    def run_cmd(self, cmd):
-        """Replaces os.system call, while hiding stdout+stderr messages.
-
-        This is needed for adb calls that may result in the adb status changing.
-        Mobly's adb.shell function does not handle cases where the device may
-        become unavailable for a little bit.
-        """
-        with open(os.devnull, 'wb') as devnull:
-            subprocess.check_call(
-                cmd.split(), stdout=devnull, stderr=subprocess.STDOUT
-            )
-
     def setup_class(self):
         # Registering android_device controller module declares the test
         # dependencies on Android device hardware. By default, we expect at
@@ -138,54 +126,79 @@ class DeviceAsWebcamTest(base_test.BaseTestClass):
 
     def test_webcam(self):
 
-        adb = f'adb -s {self.dut.serial}'
-
         # Keep device on while testing since it requires a manual check on the
         # webcam frames
         # '7' is a combination of flags ORed together to keep the device on
         # in all cases
         self.dut.adb.shell(
-            ['settings', 'put', 'global', 'stay_on_while_plugged_in', '7']
+            'settings put global stay_on_while_plugged_in 7'.split()
         )
 
-        cmd = f"""{adb} shell am start {self._WEBCAM_TEST_ACTIVITY}
-        --activity-brought-to-front"""
-        self.run_cmd(cmd)
+        cmd = (
+            f'am start {self._WEBCAM_TEST_ACTIVITY} --activity-brought-to-front'
+        )
+        self.dut.adb.shell(cmd.split())
 
         # Check if webcam feature is enabled
-        dut_webcam_enabled = self.dut.adb.shell(
-            ['getprop', 'ro.usb.uvc.enabled']
-        )
-        if 'true' in dut_webcam_enabled.decode('utf-8'):
+        dut_webcam_enabled = self.dut.adb.getprop('ro.usb.uvc.enabled')
+        if 'true' == dut_webcam_enabled:
             logging.info('Webcam enabled, testing webcam')
         else:
             logging.info('Webcam not enabled, skipping webcam test')
 
             # Notify CTSVerifier test that the webcam test was skipped,
             # the test will be marked as PASSED for this case
-            cmd = f"""{adb} shell am broadcast -a
-          {self._ACTION_WEBCAM_RESULT} --es {self._WEBCAM_RESULTS}
-          {self._RESULT_NOT_EXECUTED}"""
-            self.run_cmd(cmd)
-
+            cmd = (
+                f'am broadcast -a {self._ACTION_WEBCAM_RESULT} --es'
+                f' {self._WEBCAM_RESULTS} {self._RESULT_NOT_EXECUTED}'
+            )
+            self.dut.adb.shell(cmd.split())
             return
 
         # Set USB preference option to webcam
-        set_uvc = self.dut.adb.shell(['svc', 'usb', 'setFunctions', 'uvc'])
-        if not set_uvc:
+        # 'handle_usb_disconnect' reinitializes any mobly specific services that
+        # may have been disrupted by the disconnection.
+        with self.dut.handle_usb_disconnect():
+            # Set USB preference option to webcam
+            try:
+                self.dut.adb.shell('svc usb setFunctions uvc'.split())
+            except android_device.adb.AdbError as e:
+                # error code 255 may be returned because adb lost connection as
+                # part of switching to UVC. Other error codes are unexpected.
+                if e.ret_code != 255:
+                    # unhandled exception. crash and burn
+                    raise e
+            finally:
+                # adb disconnects when changing usb function and reconnects
+                # after a while. Wait for device to come back. Will throw a
+                # AdbTimeoutError exception if adb does not recover in
+                # _ADB_RESTART_WAIT seconds.
+                self.dut.adb.wait_for_device(
+                    timeout=DeviceAsWebcamTest._ADB_RESTART_WAIT
+                )
+
+        # Check if device came back with uvc mode active.
+        stderr = io.BytesIO()
+        stdout = self.dut.adb.shell(
+            'svc usb getFunctions'.split(), stderr=stderr
+        )
+
+        # For whatever reason, this call outputs to stderr instead of stdout
+        # despite there being no error. This will likely change in the future.
+        # For now, just check both stdout and stderr.
+        stderr = stderr.getvalue().decode('utf-8')
+        stdout = stdout.decode('utf-8')
+        if 'uvc' not in stdout and 'uvc' not in stderr:
             logging.error('USB preference option to set webcam unsuccessful')
 
             # Notify CTSVerifier test that setting webcam option was
             # unsuccessful
-            cmd = f"""{adb} shell am broadcast -a
-          {self._ACTION_WEBCAM_RESULT} --es {self._WEBCAM_RESULTS}
-          {self._RESULT_FAIL}"""
-            self.run_cmd(cmd)
+            cmd = (
+                f'am broadcast -a {self._ACTION_WEBCAM_RESULT} --es'
+                f' {self._WEBCAM_RESULTS} {self._RESULT_FAIL}'
+            )
+            self.dut.adb.shell(cmd.split())
             return
-
-        # After resetting the USB preference, adb disconnects
-        # and reconnects so wait for device
-        time.sleep(self._ADB_RESTART_WAIT)
 
         fps_results = self.run_os_specific_test()
         logging.info('FPS test results (Expected, Actual): %s', fps_results)
@@ -193,31 +206,32 @@ class DeviceAsWebcamTest(base_test.BaseTestClass):
 
         test_status = self._RESULT_PASS
         if not result or not fps_results:
-            logging.info('FPS testing failed')
+            logging.error('FPS testing failed')
             test_status = self._RESULT_FAIL
 
         # Send result to CTSVerifier test
         time.sleep(self._ACTIVITY_START_WAIT)
-        cmd = f"""{adb} shell am broadcast -a
-        {self._ACTION_WEBCAM_RESULT} --es {self._WEBCAM_RESULTS}
-        {test_status}"""
-        self.run_cmd(cmd)
+        cmd = (
+            f'am broadcast -a {self._ACTION_WEBCAM_RESULT} --es'
+            f' {self._WEBCAM_RESULTS} {test_status}'
+        )
+        self.dut.adb.shell(cmd.split())
 
         # Enable the webcam service preview activity for a manual
         # check on webcam frames
-        cmd = f"""{adb} shell am start {self._DAC_PREVIEW_ACTIVITY}
-        --activity-no-history"""
-        self.run_cmd(cmd)
+        cmd = f'am start {self._DAC_PREVIEW_ACTIVITY} --activity-no-history'
+        self.dut.adb.shell(cmd.split())
         time.sleep(self._MANUAL_FRAME_CHECK_DURATION)
 
-        cmd = f"""{adb} shell am start {self._WEBCAM_TEST_ACTIVITY}
-        --activity-brought-to-front"""
-        self.run_cmd(cmd)
+        cmd = (
+            f'am start {self._WEBCAM_TEST_ACTIVITY} --activity-brought-to-front'
+        )
+        self.dut.adb.shell(cmd.split())
 
         asserts.assert_true(test_status == self._RESULT_PASS, 'Results: Failed')
 
         self.dut.adb.shell(
-            ['settings', 'put', 'global', 'stay_on_while_plugged_in', '0']
+            'settings put global stay_on_while_plugged_in 0'.split()
         )
 
 
