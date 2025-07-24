@@ -91,11 +91,11 @@ def _get_device_info_for_v4l2_node(node: str) -> DeviceInfo | None:
                     device_info['serial'] = value
 
         if 'serial' not in device_info:
-            logging.info('%s does not have an short serial.', node)
+            logging.debug('%s does not have an short serial.', node)
             return None
 
         if 'name' not in device_info:
-            logging.info(
+            logging.debug(
                 '%s does not have an associated name. Proceeding with %s.',
                 node,
                 _UNKNOWN_NAME,
@@ -122,6 +122,7 @@ def _find_v4l2_node_for_serial(dut_serial: str) -> DeviceInfo | None:
     """
     v4l2_nodes: list[str] = glob.glob(_VIDEO_DEVICES_PATH)
     for node in v4l2_nodes:
+        logging.debug('Testing %s for device with serial %s', node, dut_serial)
         fd: int | None = None
         try:
             fd = os.open(node, os.O_RDWR | os.O_NONBLOCK)
@@ -133,6 +134,9 @@ def _find_v4l2_node_for_serial(dut_serial: str) -> DeviceInfo | None:
 
             if not caps.capabilities & v4l2.V4L2_CAP_VIDEO_CAPTURE:
                 # webcam must support video capture capability
+                logging.debug(
+                    '%s does not support video capture. Skipping.', node
+                )
                 continue
 
             # Devices can mount multiple nodes at /dev/video*
@@ -147,6 +151,9 @@ def _find_v4l2_node_for_serial(dut_serial: str) -> DeviceInfo | None:
             except OSError:
                 # Can't enumerate formats. Not an error, but we can't test with
                 # this. Looks for other nodes
+                logging.debug(
+                    '%s does not support format enumeration. Skipping.', node
+                )
                 continue
 
             device_info = _get_device_info_for_v4l2_node(node)
@@ -154,6 +161,9 @@ def _find_v4l2_node_for_serial(dut_serial: str) -> DeviceInfo | None:
                 # Could not get device info for the node. Likely to not be
                 # an Android Device. The actual reason for missing device info
                 # is logged in _get_device_info_for_v4l2_node
+                logging.debug(
+                    'Could not associate %s with a device. Skipping.', node
+                )
                 continue
 
             if device_info.serial == dut_serial:
@@ -177,7 +187,10 @@ def _find_v4l2_node_for_serial(dut_serial: str) -> DeviceInfo | None:
                     # Failed to close FD after open was successful. Can't do
                     # much, so just ignore.
                     logging.warning(
-                        "Failed to close open fd (%d) for node '%s'", fd, node
+                        'Failed to close previously opened fd (%d) for node'
+                        " '%s'",
+                        fd,
+                        node,
                     )
 
     logging.error(
@@ -278,31 +291,40 @@ def initialize_formats_and_resolutions(video_device):
                     ].append(frmivalenum)
                     frmival_index += 1
 
+    logging.debug(prettify_formats_and_resolutions(formats_and_resolutions))
     return formats_and_resolutions
 
 
-def print_formats_and_resolutions(formats_and_resolutions):
+def prettify_formats_and_resolutions(formats_and_resolutions):
     """Helper function to print out device capabilities for debugging.
 
     Args:
       formats_and_resolutions: List to be printed
     """
+    ret = '\n'
     for elem in formats_and_resolutions:
         fmtdesc = elem[0]
-        print(f"""Format - {fmtdesc.description},
-        {fmtdesc.pixelformat} ({v4l2_fourcc_to_str(fmtdesc.pixelformat)})""")
+        ret += (
+            # pylint: disable-next=inconsistent-quotes
+            f'Format - {fmtdesc.description.decode("utf-8")},'
+            f' {fmtdesc.pixelformat} '
+            f'({v4l2_fourcc_to_str(fmtdesc.pixelformat)})\n'
+        )
         frmsize_list = elem[1]
         for frmsize_elem in frmsize_list:
             frmsize = frmsize_elem[0]
-            print(
-                '-Resolution:'
-                f' {frmsize.discrete.width}x{frmsize.discrete.height}'
+            ret += (
+                '    - Resolution:'
+                f' {frmsize.discrete.width}x{frmsize.discrete.height}\n'
             )
             frmivalenum_list = frmsize_elem[1]
             for frmivalenum in frmivalenum_list:
-                print(f"""\t{fmtdesc.description} ({fmtdesc.pixelformat}),
-            {frmivalenum.discrete.denominator / frmivalenum.discrete.numerator}
-            fps""")
+                fps = (
+                    frmivalenum.discrete.denominator
+                    / frmivalenum.discrete.numerator
+                )
+                ret += f'        - {fps} fps\n'
+    return ret
 
 
 def ioctl_retry_error(video_device, request, arg, error, errno_code):
@@ -381,13 +403,28 @@ def setup_for_test_fps(video_device, formats_and_resolutions):
                     OSError,
                     errno.EBUSY,
                 )
+                expected_fps = int(
+                    frmivalenum_elem.discrete.denominator
+                    / frmivalenum_elem.discrete.numerator
+                )
 
-                res.append((
-                    frmivalenum_elem.discrete.denominator,
-                    test_fps(
-                        video_device, frmivalenum_elem.discrete.denominator
-                    ),
-                ))
+                logging.info(
+                    'Start test %s: %dx%d @ %d fps',
+                    v4l2_fourcc_to_str(fmtdesc.pixelformat),
+                    frmsize.discrete.width,
+                    frmsize.discrete.height,
+                    expected_fps,
+                )
+                actual_fps = test_fps(video_device, expected_fps)
+                logging.info(
+                    'End test %s: %dx%d @ %d fps; actual fps: %d',
+                    v4l2_fourcc_to_str(fmtdesc.pixelformat),
+                    frmsize.discrete.width,
+                    frmsize.discrete.height,
+                    expected_fps,
+                    actual_fps,
+                )
+                res.append((expected_fps, actual_fps))
     return res
 
 
@@ -460,6 +497,7 @@ def test_fps(video_device, fps):
     end_time = time.time()
     elapsed_time = end_time - start_time
     fps_res = num_frames / elapsed_time
+    logging.debug('Received %d frames in %f seconds.', num_frames, elapsed_time)
 
     # Stream off and clean up
     ioctl_retry_error(
@@ -480,11 +518,7 @@ def main(dut_serial: str):
     # Open the webcam device
     device_info = _find_v4l2_node_for_serial(dut_serial)
     if device_info is None:
-        logging.error(
-            'Could not find a V4L2 node that corresponds to a device with'
-            " serial '%s'",
-            dut_serial,
-        )
+        # Error is logged by _find_v4l2_node_for_serial
         return []
 
     try:
