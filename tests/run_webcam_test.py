@@ -60,7 +60,19 @@ class DeviceAsWebcamTest(base_test.BaseTestClass):
         results = []
         current_os = platform.system()
 
-        if current_os == self._WINDOWS_OS:
+        if current_os == self._LINUX_OS:
+            # pylint: disable-next=import-outside-toplevel
+            import linux_webcam_test
+
+            logging.info('Starting test on Linux')
+            results = linux_webcam_test.main()
+        elif current_os == self._WINDOWS_OS:
+            logging.warning(
+                'Webcam test on Windows is decrecated and will be removed '
+                'in a future release. If the test fails, please try running on '
+                'a Linux system before filing a bug or requesting exception.'
+            )
+
             logging.info('Starting test on Windows')
             # Due to compatibility issues directly running the windows
             # main function, the results from the windows_webcam_test script
@@ -70,20 +82,19 @@ class DeviceAsWebcamTest(base_test.BaseTestClass):
             )
             output_str = output.decode('utf-8')
             results = ast.literal_eval(output_str.strip())
-        elif current_os == self._LINUX_OS:
-            # pylint: disable-next=import-outside-toplevel
-            import linux_webcam_test
-
-            logging.info('Starting test on Linux')
-            results = linux_webcam_test.main()
         elif current_os == self._MAC_OS:
+            logging.warning(
+                'Webcam test on MacOS is deprecated and will be removed '
+                'in a future release. If the test fails, please try running on '
+                'a Linux system before filing a bug or requesting exception.'
+            )
             # pylint: disable-next=import-outside-toplevel
             import mac_webcam_test
 
             logging.info('Starting test on Mac')
             results = mac_webcam_test.main()
         else:
-            logging.info('Running on an unknown OS')
+            logging.error('Running on an unknown OS')
 
         return results
 
