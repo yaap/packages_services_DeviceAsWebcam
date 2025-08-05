@@ -133,7 +133,6 @@ class DeviceAsWebcamTest(base_test.BaseTestClass):
         # least one object is created from this.
         devices = self.register_controller(android_device, min_number=1)
         self.dut = devices[0]
-        self.dut.adb.root()
 
     def test_webcam(self):
 
@@ -150,27 +149,14 @@ class DeviceAsWebcamTest(base_test.BaseTestClass):
         )
         self.dut.adb.shell(cmd.split())
 
-        # Check if webcam feature is enabled
-        dut_webcam_enabled = self.dut.adb.getprop('ro.usb.uvc.enabled')
-        if 'true' == dut_webcam_enabled:
-            logging.info('Webcam enabled, testing webcam')
-        else:
-            logging.info('Webcam not enabled, skipping webcam test')
-
-            # Notify CTSVerifier test that the webcam test was skipped,
-            # the test will be marked as PASSED for this case
-            cmd = (
-                f'am broadcast -a {self._ACTION_WEBCAM_RESULT} --es'
-                f' {self._WEBCAM_RESULTS} {self._RESULT_NOT_EXECUTED}'
-            )
-            self.dut.adb.shell(cmd.split())
-            return
-
         # Set USB preference option to webcam
         # 'handle_usb_disconnect' reinitializes any mobly specific services that
         # may have been disrupted by the disconnection.
         with self.dut.handle_usb_disconnect():
             # Set USB preference option to webcam
+            # This assumes that uvc is supported by the device which is safe
+            # as the test should only be run if the device does indeed support
+            # uvc.
             try:
                 self.dut.adb.shell('svc usb setFunctions uvc'.split())
             except android_device.adb.AdbError as e:
