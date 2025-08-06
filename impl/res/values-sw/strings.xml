@@ -27,7 +27,7 @@
     <string name="toggle_high_quality_description_on" msgid="2927400982468646409">"Washa hali ya Ubora wa Juu"</string>
     <string name="hq_warning_dialog_title" msgid="2219475457173758785">"Hali ya Ubora wa Juu"</string>
     <string name="hq_warning_dialog_content_1" msgid="4522581741851657138">"Hali ya Ubora wa Juu huzima kipengele cha kuokoa betri ili kufanya kamera ya wavuti iwe ya ubora wa juu. Ukitumia hali hii, kiasi kikubwa cha chaji kinaweza kutumika na kufanya halijoto ya kifaa kupanda."</string>
-    <string name="hq_warning_dialog_content_2" msgid="3916465225973908142"><b><u>"TAHADHARI:"</u></b>" Ukitumia kifaa chako kikiwa katika halijoto ya kiwango cha juu kwa muda mrefu, huenda hali hiyo ikaathiri muda wa kudumu wa betri ya kifaa hiki."</string>
+    <string name="hq_warning_dialog_content_2" msgid="3916465225973908142"><b><u>"TAHADHARI:"</u></b>" Ukitumia kifaa chako kikiwa katika halijoto ya kiwango cha juu kwa muda mrefu, huenda hali hiyo ikaathiri muda wa kudumu kwa betri ya kifaa hiki."</string>
     <string name="hq_warning_dialog_dont_show_again" msgid="7673771228725839758">"Usionyeshe tena"</string>
     <string name="hq_warning_dialog_button_ack" msgid="613756451667553632">"Thibitisha"</string>
     <string name="list_item_text_back_camera" msgid="3350389854150173621">"Kamera ya nyuma"</string>
