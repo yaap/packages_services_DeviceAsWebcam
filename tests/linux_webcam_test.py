@@ -13,78 +13,191 @@
 # limitations under the License.
 """Verifies advertised FPS from device as webcam."""
 
+import argparse
+from dataclasses import dataclass
 import errno
 import fcntl
 import glob
 import logging
 import mmap
 import os
+import subprocess
 import time
+
 import v4l2
 
-_DEVICE_NAME = 'android'  # TODO b/277159494
 _TEST_DURATION_SECONDS = 10
 _WAIT_MS = 10000  # 10 seconds
 _REQUEST_BUFFER_COUNT = 10
 _VIDEO_DEVICES_PATH = '/dev/video*'
+_UNKNOWN_NAME = '__UNKNOWN_NAME__'
+
+
+@dataclass
+class DeviceInfo:
+    # Advertised name of the V4L2 node. Ex. "Android Webcam"
+    name: str
+    # Serial of the USB device that mounted the V4L2 node. This is the same
+    # serial configured via config.yml
+    serial: str
+    # V4L2 node mounted by this device. Nominally, this is /dev/videoXX.
+    v4l2_node: str
 
 
 def v4l2_fourcc_to_str(fourcc):
     return ''.join([chr((fourcc >> 8 * i) & 0xFF) for i in range(4)])
 
 
-def initialize_device_path():
-    """Returns the device path of the device to be tested.
+def _get_device_info_for_v4l2_node(node: str) -> DeviceInfo | None:
+    """Returns DeviceInfo associated with the passed node.
+
+    Takes a v4l2 node like '/dev/video1' and returns the USB serial
+    associated with it. For USB devices like Android Phones, this is the same
+    serial that is used by adb.
 
     Returns:
-      Device path, /dev/video*, of device to be tested
+      DeviceInfo if the serial number of the device that mounted a v4l2 node is
+      found, or
+      None if the serial number is missing
+
+    Args:
+      node: str; Path to the V4L2 node, for example: /dev/video11
     """
-    device_path = ''
-    selected_device = False
+    try:
+        # Use udevadm to get data associated with the V4L2 node.
+        cmd = 'udevadm info --query=property -n /dev/video0'.split()
+        process = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            check=True,  # Raises an exception for non-zero exit codes
+        )
 
-    video_devices = glob.glob(_VIDEO_DEVICES_PATH)
+        device_info: dict[str, str] = {}
 
-    for current_device_path in video_devices:
-        try:
-            video_device = os.open(
-                current_device_path, os.O_RDWR | os.O_NONBLOCK
+        # Parse the output line by line
+        for line in process.stdout.strip().split('\n'):
+            line = line.strip()
+            if '=' in line:
+                key, value = line.split(
+                    '=', 1
+                )  # split at most once in case the value contains =
+                if key == 'ID_V4L_PRODUCT':
+                    # The product/model name for V4L2 devices
+                    device_info['name'] = value
+                elif key == 'ID_SERIAL_SHORT':
+                    # ID_SERIAL_SHORT is the "unique" part of the USB device's
+                    # serial.
+                    device_info['serial'] = value
+
+        if 'serial' not in device_info:
+            logging.debug('%s does not have an short serial.', node)
+            return None
+
+        if 'name' not in device_info:
+            logging.debug(
+                '%s does not have an associated name. Proceeding with %s.',
+                node,
+                _UNKNOWN_NAME,
             )
+            device_info['name'] = _UNKNOWN_NAME
+
+        return DeviceInfo(device_info['name'], device_info['serial'], node)
+
+    except subprocess.CalledProcessError as e:
+        logging.error('Error executing udevadm for %s: %s', node, e.stderr)
+        return None
+
+
+def _find_v4l2_node_for_serial(dut_serial: str) -> DeviceInfo | None:
+    """Looks for V4L2 node mounted by a USB device with the given serial number.
+
+    Returns:
+      DeviceInfo of the V4L2 node mounted by dut (as matched by dut_serial), or
+      None if no such node is found.
+
+    Args:
+      dut_serial: str; Serial of the device under test that mounts the V4L2 node
+        to be tested.
+    """
+    v4l2_nodes: list[str] = glob.glob(_VIDEO_DEVICES_PATH)
+    for node in v4l2_nodes:
+        logging.debug('Testing %s for device with serial %s', node, dut_serial)
+        fd: int | None = None
+        try:
+            fd = os.open(node, os.O_RDWR | os.O_NONBLOCK)
+
             caps = v4l2.v4l2_capability()
             ioctl_retry_error(
-                video_device, v4l2.VIDIOC_QUERYCAP, caps, OSError, errno.EBUSY
+                fd, v4l2.VIDIOC_QUERYCAP, caps, OSError, errno.EBUSY
             )
 
-            if (
-                _DEVICE_NAME in caps.card.lower().decode('utf-8')
-                and not selected_device
-                and caps.capabilities & v4l2.V4L2_CAP_VIDEO_CAPTURE
-            ):
-                # Devices can mount multiple nodes at /dev/video*
-                # Check for one that is used for capturing by finding
-                # if formats can be retrieved from it
-                while True:
-                    try:
-                        fmtdesc = v4l2.v4l2_fmtdesc()
-                        fmtdesc.type = v4l2.V4L2_BUF_TYPE_VIDEO_CAPTURE
-                        ioctl_retry_error(
-                            video_device,
-                            v4l2.VIDIOC_ENUM_FMT,
-                            fmtdesc,
-                            OSError,
-                            errno.EBUSY,
-                        )
-                    except OSError:
-                        break
-                    else:
-                        selected_device = True
-                        device_path = current_device_path
-                        break
+            if not caps.capabilities & v4l2.V4L2_CAP_VIDEO_CAPTURE:
+                # webcam must support video capture capability
+                logging.debug(
+                    '%s does not support video capture. Skipping.', node
+                )
+                continue
 
-            os.close(video_device)
-        except OSError:
-            pass
+            # Devices can mount multiple nodes at /dev/video*
+            # Check for one that is used for capturing by checking
+            # if formats can be retrieved from it
+            try:
+                fmtdesc = v4l2.v4l2_fmtdesc()
+                fmtdesc.type = v4l2.V4L2_BUF_TYPE_VIDEO_CAPTURE
+                ioctl_retry_error(
+                    fd, v4l2.VIDIOC_ENUM_FMT, fmtdesc, OSError, errno.EBUSY
+                )
+            except OSError:
+                # Can't enumerate formats. Not an error, but we can't test with
+                # this. Looks for other nodes
+                logging.debug(
+                    '%s does not support format enumeration. Skipping.', node
+                )
+                continue
 
-    return device_path
+            device_info = _get_device_info_for_v4l2_node(node)
+            if device_info is None:
+                # Could not get device info for the node. Likely to not be
+                # an Android Device. The actual reason for missing device info
+                # is logged in _get_device_info_for_v4l2_node
+                logging.debug(
+                    'Could not associate %s with a device. Skipping.', node
+                )
+                continue
+
+            if device_info.serial == dut_serial:
+                logging.info(
+                    "Found '%s' at '%s' mounted by device with serial '%s'",
+                    device_info.name,
+                    device_info.v4l2_node,
+                    dut_serial,
+                )
+                return device_info
+
+        except OSError as e:
+            logging.info(
+                "Error while opening %s. Error: '%s'", node, e.strerror
+            )
+        finally:
+            if fd is not None:
+                try:
+                    os.close(fd)
+                except OSError:
+                    # Failed to close FD after open was successful. Can't do
+                    # much, so just ignore.
+                    logging.warning(
+                        'Failed to close previously opened fd (%d) for node'
+                        " '%s'",
+                        fd,
+                        node,
+                    )
+
+    logging.error(
+        'Could not find a V4L2 node belonging to device with serial %s.',
+        dut_serial,
+    )
+    return None
 
 
 def initialize_formats_and_resolutions(video_device):
@@ -178,31 +291,40 @@ def initialize_formats_and_resolutions(video_device):
                     ].append(frmivalenum)
                     frmival_index += 1
 
+    logging.debug(prettify_formats_and_resolutions(formats_and_resolutions))
     return formats_and_resolutions
 
 
-def print_formats_and_resolutions(formats_and_resolutions):
+def prettify_formats_and_resolutions(formats_and_resolutions):
     """Helper function to print out device capabilities for debugging.
 
     Args:
       formats_and_resolutions: List to be printed
     """
+    ret = '\n'
     for elem in formats_and_resolutions:
         fmtdesc = elem[0]
-        print(f"""Format - {fmtdesc.description},
-        {fmtdesc.pixelformat} ({v4l2_fourcc_to_str(fmtdesc.pixelformat)})""")
+        ret += (
+            # pylint: disable-next=inconsistent-quotes
+            f'Format - {fmtdesc.description.decode("utf-8")},'
+            f' {fmtdesc.pixelformat} '
+            f'({v4l2_fourcc_to_str(fmtdesc.pixelformat)})\n'
+        )
         frmsize_list = elem[1]
         for frmsize_elem in frmsize_list:
             frmsize = frmsize_elem[0]
-            print(
-                '-Resolution:'
-                f' {frmsize.discrete.width}x{frmsize.discrete.height}'
+            ret += (
+                '    - Resolution:'
+                f' {frmsize.discrete.width}x{frmsize.discrete.height}\n'
             )
             frmivalenum_list = frmsize_elem[1]
             for frmivalenum in frmivalenum_list:
-                print(f"""\t{fmtdesc.description} ({fmtdesc.pixelformat}),
-            {frmivalenum.discrete.denominator / frmivalenum.discrete.numerator}
-            fps""")
+                fps = (
+                    frmivalenum.discrete.denominator
+                    / frmivalenum.discrete.numerator
+                )
+                ret += f'        - {fps} fps\n'
+    return ret
 
 
 def ioctl_retry_error(video_device, request, arg, error, errno_code):
@@ -281,13 +403,28 @@ def setup_for_test_fps(video_device, formats_and_resolutions):
                     OSError,
                     errno.EBUSY,
                 )
+                expected_fps = int(
+                    frmivalenum_elem.discrete.denominator
+                    / frmivalenum_elem.discrete.numerator
+                )
 
-                res.append((
-                    frmivalenum_elem.discrete.denominator,
-                    test_fps(
-                        video_device, frmivalenum_elem.discrete.denominator
-                    ),
-                ))
+                logging.info(
+                    'Start test %s: %dx%d @ %d fps',
+                    v4l2_fourcc_to_str(fmtdesc.pixelformat),
+                    frmsize.discrete.width,
+                    frmsize.discrete.height,
+                    expected_fps,
+                )
+                actual_fps = test_fps(video_device, expected_fps)
+                logging.info(
+                    'End test %s: %dx%d @ %d fps; actual fps: %d',
+                    v4l2_fourcc_to_str(fmtdesc.pixelformat),
+                    frmsize.discrete.width,
+                    frmsize.discrete.height,
+                    expected_fps,
+                    actual_fps,
+                )
+                res.append((expected_fps, actual_fps))
     return res
 
 
@@ -360,6 +497,7 @@ def test_fps(video_device, fps):
     end_time = time.time()
     elapsed_time = end_time - start_time
     fps_res = num_frames / elapsed_time
+    logging.debug('Received %d frames in %f seconds.', num_frames, elapsed_time)
 
     # Stream off and clean up
     ioctl_retry_error(
@@ -376,17 +514,21 @@ def test_fps(video_device, fps):
     return fps_res
 
 
-def main():
+def main(dut_serial: str):
     # Open the webcam device
-    device_path = initialize_device_path()
-    if not device_path:
-        logging.error('Supported device not found!')
+    device_info = _find_v4l2_node_for_serial(dut_serial)
+    if device_info is None:
+        # Error is logged by _find_v4l2_node_for_serial
         return []
 
     try:
-        video_device = os.open(device_path, os.O_RDWR | os.O_NONBLOCK)
+        video_device = os.open(device_info.v4l2_node, os.O_RDWR | os.O_NONBLOCK)
     except OSError as e:
-        print(f'Error: failed to open device {device_path}: error {e}')
+        logging.error(
+            'Error: failed to open device %s: error %s',
+            device_info.v4l2_node,
+            e.strerror,
+        )
         return []
 
     formats_and_resolutions = initialize_formats_and_resolutions(video_device)
@@ -402,4 +544,27 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser(
+        description=(
+            'Runs the Webcam test on Linux. For reporting the result to'
+            ' CTSVerifier, use run_webcam_test.py instead.'
+        )
+    )
+    parser.add_argument(
+        '-s',
+        '--serial',
+        type=str,
+        default=os.getenv('ANDROID_SERIAL'),
+        help=(
+            'Serial number of the device being tested. Defaults to'
+            ' ANDROID_SERIAL environment variable if not provided.'
+        ),
+    )
+    args = parser.parse_args()
+
+    if args.serial is None or args.serial == '':
+        logging.error('No serial serial provided for the DUT.')
+        logging.error(parser.format_help())
+        exit(1)
+
+    main(args.serial)

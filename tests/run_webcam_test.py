@@ -65,7 +65,7 @@ class DeviceAsWebcamTest(base_test.BaseTestClass):
             import linux_webcam_test
 
             logging.info('Starting test on Linux')
-            results = linux_webcam_test.main()
+            results = linux_webcam_test.main(self.dut.serial)
         elif current_os == self._WINDOWS_OS:
             logging.warning(
                 'Webcam test on Windows is decrecated and will be removed '
@@ -99,8 +99,9 @@ class DeviceAsWebcamTest(base_test.BaseTestClass):
         return results
 
     def validate_fps(self, results):
-        """Verifies the webcam FPS falls within the acceptable range of the
+        """Verifies the webcam FPS
 
+        Verifies that the webcam FPS falls within the acceptable range of the
         tested FPS.
 
         Args:
@@ -134,8 +135,6 @@ class DeviceAsWebcamTest(base_test.BaseTestClass):
         devices = self.register_controller(android_device, min_number=1)
         self.dut = devices[0]
 
-    def test_webcam(self):
-
         # Keep device on while testing since it requires a manual check on the
         # webcam frames
         # '7' is a combination of flags ORed together to keep the device on
@@ -144,6 +143,13 @@ class DeviceAsWebcamTest(base_test.BaseTestClass):
             'settings put global stay_on_while_plugged_in 7'.split()
         )
 
+    def teardown_class(self):
+        self.dut.adb.shell(
+            'settings put global stay_on_while_plugged_in 0'.split()
+        )
+        return super().teardown_class()
+
+    def test_webcam(self):
         cmd = (
             f'am start {self._WEBCAM_TEST_ACTIVITY} --activity-brought-to-front'
         )
@@ -158,6 +164,7 @@ class DeviceAsWebcamTest(base_test.BaseTestClass):
             # as the test should only be run if the device does indeed support
             # uvc.
             try:
+                logging.info('Setting USB preference option to webcam')
                 self.dut.adb.shell('svc usb setFunctions uvc'.split())
             except android_device.adb.AdbError as e:
                 # error code 255 may be returned because adb lost connection as
@@ -186,7 +193,7 @@ class DeviceAsWebcamTest(base_test.BaseTestClass):
         stderr = stderr.getvalue().decode('utf-8')
         stdout = stdout.decode('utf-8')
         if 'uvc' not in stdout and 'uvc' not in stderr:
-            logging.error('USB preference option to set webcam unsuccessful')
+            logging.error('Could not switch to webcam mode')
 
             # Notify CTSVerifier test that setting webcam option was
             # unsuccessful
@@ -195,14 +202,25 @@ class DeviceAsWebcamTest(base_test.BaseTestClass):
                 f' {self._WEBCAM_RESULTS} {self._RESULT_FAIL}'
             )
             self.dut.adb.shell(cmd.split())
+            asserts.fail('Could not switch to webcam mode.')
             return
 
         fps_results = self.run_os_specific_test()
+        if not fps_results:
+            # Notify CTSVerifier that no fps tests were executed.
+            cmd = (
+                f'am broadcast -a {self._ACTION_WEBCAM_RESULT} --es'
+                f' {self._WEBCAM_RESULTS} {self._RESULT_FAIL}'
+            )
+            self.dut.adb.shell(cmd.split())
+            asserts.fail('Could not run webcam test. See logs for errors.')
+            return
+
         logging.info('FPS test results (Expected, Actual): %s', fps_results)
         result = self.validate_fps(fps_results)
 
         test_status = self._RESULT_PASS
-        if not result or not fps_results:
+        if not result:
             logging.error('FPS testing failed')
             test_status = self._RESULT_FAIL
 
@@ -226,10 +244,6 @@ class DeviceAsWebcamTest(base_test.BaseTestClass):
         self.dut.adb.shell(cmd.split())
 
         asserts.assert_true(test_status == self._RESULT_PASS, 'Results: Failed')
-
-        self.dut.adb.shell(
-            'settings put global stay_on_while_plugged_in 0'.split()
-        )
 
 
 if __name__ == '__main__':
