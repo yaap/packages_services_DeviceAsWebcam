@@ -542,7 +542,33 @@ void UVCProvider::UVCDevice::commitControls() {
               strerror(errno));
         return;
     }
-    ALOGV("%s controls committed frame width %u, height %u, format %u, sizeimage %u"
+
+    v4l2_streamparm streamparm{};
+    // The gadget requires streamparam.type to be set for VIDIOC_G_PARM as well
+    streamparm.type = V4L2_BUF_TYPE_VIDEO_OUTPUT;
+    if (ioctl(mUVCFd.get(), VIDIOC_G_PARM, &streamparm) < 0) {
+        if (errno == ENOTTY) {
+            ALOGV("%s VIDIOC_G_PARM unsupported on device", __FUNCTION__);
+        } else {
+            ALOGE("%s Unable to get default stream parameters with the uvc gadget driver: %s",
+                  __FUNCTION__, strerror(errno));
+            return;
+        }
+    }
+
+    streamparm.parm.output.timeperframe.numerator = mCommit.dwFrameInterval;
+    streamparm.parm.output.timeperframe.denominator = FRAME_INTERVAL_NUM;
+    if (ioctl(mUVCFd.get(), VIDIOC_S_PARM, &streamparm) < 0) {
+        if (errno == ENOTTY) {
+            ALOGV("%s VIDIOC_S_PARM unsupported on device", __FUNCTION__);
+        } else {
+            ALOGE("%s Unable to set stream parameters with the uvc gadget driver: %s", __FUNCTION__,
+                  strerror(errno));
+            return;
+        }
+    }
+
+    ALOGI("%s controls committed frame width %u, height %u, format %u, sizeimage %u"
           " frame rate %u mjpeg fourcc %u",
           __FUNCTION__, mV4l2Format.fmt.pix.width, mV4l2Format.fmt.pix.height,
           mV4l2Format.fmt.pix.pixelformat, mV4l2Format.fmt.pix.sizeimage, mFps, V4L2_PIX_FMT_MJPEG);
