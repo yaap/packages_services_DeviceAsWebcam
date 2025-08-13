@@ -65,16 +65,17 @@ def _get_device_info_for_v4l2_node(node: str) -> DeviceInfo | None:
     """
     try:
         # Use udevadm to get data associated with the V4L2 node.
-        cmd = 'udevadm info --query=property -n /dev/video0'.split()
+        cmd = f'udevadm info --query=property -n {node}'
+        logging.debug('Running command: %s', cmd)
         process = subprocess.run(
-            cmd,
+            cmd.split(),
             capture_output=True,
             text=True,
             check=True,  # Raises an exception for non-zero exit codes
         )
 
         device_info: dict[str, str] = {}
-
+        logging.debug('Command Output: %s', process.stdout.strip())
         # Parse the output line by line
         for line in process.stdout.strip().split('\n'):
             line = line.strip()
