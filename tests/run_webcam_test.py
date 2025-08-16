@@ -17,13 +17,22 @@ import ast
 import io
 import logging
 import platform
+import re
 import subprocess
 import time
+from typing import NamedTuple
 
 from mobly import asserts
 from mobly import base_test
 from mobly import test_runner
 from mobly.controllers import android_device
+
+
+class SdkVersion(NamedTuple):
+    """A class that represents the SDK version of the device."""
+
+    major: int  # The major SDK version of the device
+    minor: int  # The minor SDK version of the device
 
 
 class DeviceAsWebcamTest(base_test.BaseTestClass):
@@ -50,6 +59,31 @@ class DeviceAsWebcamTest(base_test.BaseTestClass):
     _WINDOWS_OS = 'Windows'
     _MAC_OS = 'Darwin'
     _LINUX_OS = 'Linux'
+
+    def get_full_sdk_version(self) -> SdkVersion:
+        """Gets and parses the full SDK version of the dut.
+
+        Returns:
+          An SdkVersion namedtuple (major, minor).
+
+        Raises:
+          ValueError: If the SDK version string from the device property
+            'ro.build.version.sdk_full' cannot be parsed.
+        """
+        sdk_full = self.dut.adb.getprop('ro.build.version.sdk_full')
+        logging.debug('ro.build.version.sdk_full: %s', sdk_full)
+
+        match = re.fullmatch(r'(\d+)\.(\d+)', sdk_full)
+        if not match:
+            raise ValueError(
+                f'Failed to parse ro.build.version.sdk_full: {sdk_full}'
+            )
+
+        sdk_major = int(match.group(1))
+        sdk_minor = int(match.group(2))
+        logging.debug('sdk_major: %s; sdk_minor: %s', sdk_major, sdk_minor)
+
+        return SdkVersion(sdk_major, sdk_minor)
 
     def run_os_specific_test(self):
         """Runs the os specific webcam test script.
@@ -232,16 +266,35 @@ class DeviceAsWebcamTest(base_test.BaseTestClass):
         )
         self.dut.adb.shell(cmd.split())
 
-        # Enable the webcam service preview activity for a manual
-        # check on webcam frames
-        cmd = f'am start {self._DAC_PREVIEW_ACTIVITY} --activity-no-history'
-        self.dut.adb.shell(cmd.split())
-        time.sleep(self._MANUAL_FRAME_CHECK_DURATION)
+        sdk_version = self.get_full_sdk_version()
+        if sdk_version.major < 36 or (
+            sdk_version.major == 36 and sdk_version.minor < 1
+        ):
+            # DeviceAsWebcam does not export the preview activity before
+            # sdk 36.1. Attempting to start an unexported activity via ADB will
+            # cause a SecurityException. To prevent the test from crashing on
+            # older devices, skip pulling up the activity and instruct the
+            # user to manually verify the functionality.
+            logging.warning(
+                'Skipping pulling up the webcam activity as it causes a '
+                'SecurityException on older versions.'
+            )
+            logging.warning(
+                'Please manually verify that the Webcam Preview activity is'
+                ' working.'
+            )
+        else:
+            # Enable the webcam service preview activity for a manual
+            # check on webcam frames
+            cmd = f'am start {self._DAC_PREVIEW_ACTIVITY} --activity-no-history'
+            self.dut.adb.shell(cmd.split())
+            time.sleep(self._MANUAL_FRAME_CHECK_DURATION)
 
-        cmd = (
-            f'am start {self._WEBCAM_TEST_ACTIVITY} --activity-brought-to-front'
-        )
-        self.dut.adb.shell(cmd.split())
+            cmd = (
+                'am start'
+                f' {self._WEBCAM_TEST_ACTIVITY} --activity-brought-to-front'
+            )
+            self.dut.adb.shell(cmd.split())
 
         asserts.assert_true(test_status == self._RESULT_PASS, 'Results: Failed')
 
