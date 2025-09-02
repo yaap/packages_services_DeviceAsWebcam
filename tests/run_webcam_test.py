@@ -54,11 +54,14 @@ class DeviceAsWebcamTest(base_test.BaseTestClass):
     _FPS_TOLERANCE = 0.15  # 15 percent
     _RESULT_PASS = 'PASS'
     _RESULT_FAIL = 'FAIL'
+    _RESULT_FORCE_PASS = 'FORCE_PASS'
     _RESULT_NOT_EXECUTED = 'NOT_EXECUTED'
     _MANUAL_FRAME_CHECK_DURATION = 8  # seconds
     _WINDOWS_OS = 'Windows'
     _MAC_OS = 'Darwin'
     _LINUX_OS = 'Linux'
+    _FORCE_PASS_SDK_VERSION = 36
+    _FORCE_PASS_SDK_VERSION_FULL = 202504
 
     def get_full_sdk_version(self) -> SdkVersion:
         """Gets and parses the full SDK version of the dut.
@@ -258,6 +261,26 @@ class DeviceAsWebcamTest(base_test.BaseTestClass):
             logging.error('FPS testing failed')
             test_status = self._RESULT_FAIL
 
+        # This test was broken until 25Q4, and passed unconditionally on user
+        # only builds. As we cannot break upgrading devices, this test
+        # will pass unconditionally on devices launching with Android 2025Q4
+        # or earlier.
+        vendor_api = int(self.dut.adb.getprop('ro.vendor.api_level'))
+        # vendor_api is either of the format YYYYMM or the Android SDK version
+        # number.
+        must_pass = vendor_api <= self._FORCE_PASS_SDK_VERSION or (
+            vendor_api > 100000
+            and vendor_api <= self._FORCE_PASS_SDK_VERSION_FULL
+        )
+        logging.debug('Vendor API: %s, Must Pass: %s', vendor_api, must_pass)
+        if not result and must_pass:
+            logging.warning(
+                'Test failed but ignoring due to vendor freeze testing'
+                ' guarantees. Please ensure that the webcam framerate is'
+                ' acceptable to your users.'
+            )
+            test_status = self._RESULT_FORCE_PASS
+
         # Send result to CTSVerifier test
         time.sleep(self._ACTIVITY_START_WAIT)
         cmd = (
@@ -296,7 +319,11 @@ class DeviceAsWebcamTest(base_test.BaseTestClass):
             )
             self.dut.adb.shell(cmd.split())
 
-        asserts.assert_true(test_status == self._RESULT_PASS, 'Results: Failed')
+        asserts.assert_true(
+            test_status == self._RESULT_PASS
+            or test_status == self._RESULT_FORCE_PASS,
+            'Results: Failed',
+        )
 
 
 if __name__ == '__main__':
