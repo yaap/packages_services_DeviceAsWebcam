@@ -20,6 +20,7 @@ import platform
 import re
 import subprocess
 import time
+
 from typing import NamedTuple
 
 from mobly import asserts
@@ -187,80 +188,6 @@ class DeviceAsWebcamTest(base_test.BaseTestClass):
         return super().teardown_class()
 
     def test_webcam(self):
-        cmd = (
-            f'am start {self._WEBCAM_TEST_ACTIVITY} --activity-brought-to-front'
-        )
-        self.dut.adb.shell(cmd.split())
-
-        # Set USB preference option to webcam
-        # 'handle_usb_disconnect' reinitializes any mobly specific services that
-        # may have been disrupted by the disconnection.
-        with self.dut.handle_usb_disconnect():
-            # Set USB preference option to webcam
-            # This assumes that uvc is supported by the device which is safe
-            # as the test should only be run if the device does indeed support
-            # uvc.
-            try:
-                logging.info('Setting USB preference option to webcam')
-                self.dut.adb.shell('svc usb setFunctions uvc'.split())
-            except android_device.adb.AdbError as e:
-                # error code 255 may be returned because adb lost connection as
-                # part of switching to UVC. Other error codes are unexpected.
-                if e.ret_code != 255:
-                    # unhandled exception. crash and burn
-                    raise e
-            finally:
-                # adb disconnects when changing usb function and reconnects
-                # after a while. Wait for device to come back. Will throw a
-                # AdbTimeoutError exception if adb does not recover in
-                # _ADB_RESTART_WAIT seconds.
-                self.dut.adb.wait_for_device(
-                    timeout=DeviceAsWebcamTest._ADB_RESTART_WAIT
-                )
-
-        # Check if device came back with uvc mode active.
-        stderr = io.BytesIO()
-        stdout = self.dut.adb.shell(
-            'svc usb getFunctions'.split(), stderr=stderr
-        )
-
-        # For whatever reason, this call outputs to stderr instead of stdout
-        # despite there being no error. This will likely change in the future.
-        # For now, just check both stdout and stderr.
-        stderr = stderr.getvalue().decode('utf-8')
-        stdout = stdout.decode('utf-8')
-        if 'uvc' not in stdout and 'uvc' not in stderr:
-            logging.error('Could not switch to webcam mode')
-
-            # Notify CTSVerifier test that setting webcam option was
-            # unsuccessful
-            cmd = (
-                f'am broadcast -a {self._ACTION_WEBCAM_RESULT} --es'
-                f' {self._WEBCAM_RESULTS} {self._RESULT_FAIL}'
-            )
-            self.dut.adb.shell(cmd.split())
-            asserts.fail('Could not switch to webcam mode.')
-            return
-
-        fps_results = self.run_os_specific_test()
-        if not fps_results:
-            # Notify CTSVerifier that no fps tests were executed.
-            cmd = (
-                f'am broadcast -a {self._ACTION_WEBCAM_RESULT} --es'
-                f' {self._WEBCAM_RESULTS} {self._RESULT_FAIL}'
-            )
-            self.dut.adb.shell(cmd.split())
-            asserts.fail('Could not run webcam test. See logs for errors.')
-            return
-
-        logging.info('FPS test results (Expected, Actual): %s', fps_results)
-        result = self.validate_fps(fps_results)
-
-        test_status = self._RESULT_PASS
-        if not result:
-            logging.error('FPS testing failed')
-            test_status = self._RESULT_FAIL
-
         # This test was broken until 25Q4, and passed unconditionally on user
         # only builds. As we cannot break upgrading devices, this test
         # will pass unconditionally on devices launching with Android 2025Q4
@@ -273,51 +200,139 @@ class DeviceAsWebcamTest(base_test.BaseTestClass):
             and vendor_api <= self._FORCE_PASS_SDK_VERSION_FULL
         )
         logging.debug('Vendor API: %s, Must Pass: %s', vendor_api, must_pass)
-        if not result and must_pass:
-            logging.warning(
-                'Test failed but ignoring due to vendor freeze testing'
-                ' guarantees. Please ensure that the webcam framerate is'
-                ' acceptable to your users.'
-            )
-            test_status = self._RESULT_FORCE_PASS
-
-        # Send result to CTSVerifier test
-        time.sleep(self._ACTIVITY_START_WAIT)
-        cmd = (
-            f'am broadcast -a {self._ACTION_WEBCAM_RESULT} --es'
-            f' {self._WEBCAM_RESULTS} {test_status}'
-        )
-        self.dut.adb.shell(cmd.split())
-
-        sdk_version = self.get_full_sdk_version()
-        if sdk_version.major < 36 or (
-            sdk_version.major == 36 and sdk_version.minor < 1
-        ):
-            # DeviceAsWebcam does not export the preview activity before
-            # sdk 36.1. Attempting to start an unexported activity via ADB will
-            # cause a SecurityException. To prevent the test from crashing on
-            # older devices, skip pulling up the activity and instruct the
-            # user to manually verify the functionality.
-            logging.warning(
-                'Skipping pulling up the webcam activity as it causes a '
-                'SecurityException on older versions.'
-            )
-            logging.warning(
-                'Please manually verify that the Webcam Preview activity is'
-                ' working.'
-            )
-        else:
-            # Enable the webcam service preview activity for a manual
-            # check on webcam frames
-            cmd = f'am start {self._DAC_PREVIEW_ACTIVITY} --activity-no-history'
-            self.dut.adb.shell(cmd.split())
-            time.sleep(self._MANUAL_FRAME_CHECK_DURATION)
-
+        test_status = self._RESULT_PASS
+        try:
             cmd = (
                 'am start'
                 f' {self._WEBCAM_TEST_ACTIVITY} --activity-brought-to-front'
             )
             self.dut.adb.shell(cmd.split())
+
+            # Set USB preference option to webcam
+            # 'handle_usb_disconnect' reinitializes any mobly specific services that
+            # may have been disrupted by the disconnection.
+            with self.dut.handle_usb_disconnect():
+                # Set USB preference option to webcam
+                # This assumes that uvc is supported by the device which is safe
+                # as the test should only be run if the device does indeed support
+                # uvc.
+                try:
+                    logging.info('Setting USB preference option to webcam')
+                    self.dut.adb.shell('svc usb setFunctions uvc'.split())
+                except android_device.adb.AdbError as e:
+                    # error code 255 may be returned because adb lost connection as
+                    # part of switching to UVC. Other error codes are unexpected.
+                    if e.ret_code != 255:
+                        # unhandled exception. crash and burn
+                        raise e
+                finally:
+                    # adb disconnects when changing usb function and reconnects
+                    # after a while. Wait for device to come back. Will throw a
+                    # AdbTimeoutError exception if adb does not recover in
+                    # _ADB_RESTART_WAIT seconds.
+                    self.dut.adb.wait_for_device(
+                        timeout=DeviceAsWebcamTest._ADB_RESTART_WAIT
+                    )
+
+            # Check if device came back with uvc mode active.
+            stderr = io.BytesIO()
+            stdout = self.dut.adb.shell(
+                'svc usb getFunctions'.split(), stderr=stderr
+            )
+
+            # For whatever reason, this call outputs to stderr instead of stdout
+            # despite there being no error. This will likely change in the future.
+            # For now, just check both stdout and stderr.
+            stderr = stderr.getvalue().decode('utf-8')
+            stdout = stdout.decode('utf-8')
+            if 'uvc' not in stdout and 'uvc' not in stderr:
+                logging.error('Could not switch to webcam mode')
+
+                # Notify CTSVerifier test that setting webcam option was
+                # unsuccessful
+                cmd = (
+                    f'am broadcast -a {self._ACTION_WEBCAM_RESULT} --es'
+                    f' {self._WEBCAM_RESULTS} {self._RESULT_FAIL}'
+                )
+                self.dut.adb.shell(cmd.split())
+                asserts.fail('Could not switch to webcam mode.')
+
+            fps_results = self.run_os_specific_test()
+            if not fps_results:
+                # Notify CTSVerifier that no fps tests were executed.
+                cmd = (
+                    f'am broadcast -a {self._ACTION_WEBCAM_RESULT} --es'
+                    f' {self._WEBCAM_RESULTS} {self._RESULT_FAIL}'
+                )
+                self.dut.adb.shell(cmd.split())
+                asserts.fail('Could not run webcam test. See logs for errors.')
+
+            logging.info('FPS test results (Expected, Actual): %s', fps_results)
+            result = self.validate_fps(fps_results)
+
+            if not result:
+                logging.error('FPS testing failed')
+                test_status = self._RESULT_FAIL
+
+            if not result and must_pass:
+                logging.warning(
+                    'Test failed but ignoring due to vendor freeze testing'
+                    ' guarantees. Please ensure that the webcam framerate is'
+                    ' acceptable to your users.'
+                )
+                test_status = self._RESULT_FORCE_PASS
+
+            # Send result to CTSVerifier test
+            time.sleep(self._ACTIVITY_START_WAIT)
+            cmd = (
+                f'am broadcast -a {self._ACTION_WEBCAM_RESULT} --es'
+                f' {self._WEBCAM_RESULTS} {test_status}'
+            )
+            self.dut.adb.shell(cmd.split())
+
+            sdk_version = self.get_full_sdk_version()
+            if sdk_version.major < 36 or (
+                sdk_version.major == 36 and sdk_version.minor < 1
+            ):
+                # DeviceAsWebcam does not export the preview activity before
+                # sdk 36.1. Attempting to start an unexported activity via ADB will
+                # cause a SecurityException. To prevent the test from crashing on
+                # older devices, skip pulling up the activity and instruct the
+                # user to manually verify the functionality.
+                logging.warning(
+                    'Skipping pulling up the webcam activity as it causes a '
+                    'SecurityException on older versions.'
+                )
+                logging.warning(
+                    'Please manually verify that the Webcam Preview activity is'
+                    ' working.'
+                )
+            else:
+                # Enable the webcam service preview activity for a manual
+                # check on webcam frames
+                cmd = (
+                    'am start'
+                    f' {self._DAC_PREVIEW_ACTIVITY} --activity-no-history'
+                )
+                self.dut.adb.shell(cmd.split())
+                time.sleep(self._MANUAL_FRAME_CHECK_DURATION)
+
+                cmd = (
+                    'am start'
+                    f' {self._WEBCAM_TEST_ACTIVITY} --activity-brought-to-front'
+                )
+                self.dut.adb.shell(cmd.split())
+        except Exception as e:
+            if must_pass:
+                logging.warning(
+                    'Test failed but ignoring due to vendor freeze testing'
+                    ' guarantees. Please ensure that the webcam framerate is'
+                    ' acceptable to your users.',
+                    exc_info=True,
+                )
+                test_status = self._RESULT_FORCE_PASS
+            else:
+                raise e
 
         asserts.assert_true(
             test_status == self._RESULT_PASS
