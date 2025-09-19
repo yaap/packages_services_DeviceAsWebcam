@@ -258,7 +258,7 @@ class DeviceAsWebcamTest(base_test.BaseTestClass):
                 asserts.fail('Could not switch to webcam mode.')
 
             fps_results = self.run_os_specific_test()
-            if not fps_results:
+            if not fps_results and not must_pass:
                 # Notify CTSVerifier that no fps tests were executed.
                 cmd = (
                     f'am broadcast -a {self._ACTION_WEBCAM_RESULT} --es'
@@ -331,6 +331,11 @@ class DeviceAsWebcamTest(base_test.BaseTestClass):
                     exc_info=True,
                 )
                 test_status = self._RESULT_FORCE_PASS
+                cmd = (
+                    f'am broadcast -a {self._ACTION_WEBCAM_RESULT} --es'
+                    f' {self._WEBCAM_RESULTS} {test_status}'
+                )
+                self.dut.adb.shell(cmd.split())
             else:
                 raise e
 
