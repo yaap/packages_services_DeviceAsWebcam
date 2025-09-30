@@ -23,7 +23,9 @@ import android.hardware.usb.UsbManager;
 import android.os.Bundle;
 import android.util.Log;
 
+import com.android.deviceaswebcam.flags.Flags;
 import com.android.deviceaswebcam.utils.IgnoredV4L2Nodes;
+import com.android.deviceaswebcam.utils.V4L2NodeWatcher;
 
 /**
  * Base abstract class that receives USB broadcasts from system server and starts the webcam
@@ -33,6 +35,8 @@ public abstract class DeviceAsWebcamReceiver extends BroadcastReceiver {
     private static final String TAG = DeviceAsWebcamReceiver.class.getSimpleName();
     private static final boolean VERBOSE = Log.isLoggable(TAG, Log.VERBOSE);
 
+    private static final V4L2NodeWatcher v4L2NodeWatcher = new V4L2NodeWatcher();
+
     static {
         System.loadLibrary("jni_deviceAsWebcam");
     }
@@ -40,32 +44,52 @@ public abstract class DeviceAsWebcamReceiver extends BroadcastReceiver {
     @Override
     public final void onReceive(Context context, Intent intent) {
         final String action = intent.getAction();
+        if (!UsbManager.ACTION_USB_STATE.equals(action)) {
+            if (VERBOSE) {
+                Log.v(TAG, "Not a USB state change broadcast. Returning early.");
+            }
+            return;
+        }
+
+        if (!UsbManager.isUvcSupportEnabled()) {
+            if (VERBOSE) {
+                Log.v(TAG, "UVC support isn't enabled. Returning early.");
+            }
+            return;
+        }
+
         Bundle extras = intent.getExtras();
         if (extras == null) {
             return;
         }
-        boolean uvcSelected = extras.getBoolean(UsbManager.USB_FUNCTION_UVC);
+
         if (VERBOSE) {
             Log.v(TAG, "Got broadcast with extras" + extras);
         }
-        if (!UsbManager.isUvcSupportEnabled()) {
-            Log.i(TAG, "UVC support isn't enabled. Returning early.");
+
+        Class<? extends DeviceAsWebcamFgService> klass = getForegroundServiceClass();
+        Intent fgIntent = new Intent(context, klass);
+        if (!Flags.watchV4l2NodeOnStart()) {
+            startForegroundServiceIfNeeded(context, fgIntent);
+        } else {
+            v4L2NodeWatcher.start(() -> startForegroundServiceIfNeeded(context, fgIntent));
+        }
+    }
+
+    private static void startForegroundServiceIfNeeded(Context context, Intent serviceIntent) {
+        String[] ignoredNodes = IgnoredV4L2Nodes.getIgnoredNodes(context);
+        if (!DeviceAsWebcamFgService.shouldStartServiceNative(ignoredNodes)) {
+            if (VERBOSE) {
+                Log.v(TAG, "Shouldn't start service so returning");
+            }
             return;
         }
-        if (UsbManager.ACTION_USB_STATE.equals(action) && uvcSelected) {
-            String[] ignoredNodes = IgnoredV4L2Nodes.getIgnoredNodes(context);
-            if (!DeviceAsWebcamFgService.shouldStartServiceNative(ignoredNodes)) {
-                if (VERBOSE) {
-                    Log.v(TAG, "Shouldn't start service so returning");
-                }
-                return;
-            }
-            Class<? extends DeviceAsWebcamFgService> klass = getForegroundServiceClass();
-            Intent fgIntent = new Intent(context, klass);
-            context.startForegroundService(fgIntent);
-            if (VERBOSE) {
-                Log.v(TAG, "started foreground service");
-            }
+        context.startForegroundService(serviceIntent);
+        if (VERBOSE) {
+            Log.v(TAG, "started foreground service");
+        }
+        if (Flags.watchV4l2NodeOnStart()) {
+            v4L2NodeWatcher.stop();
         }
     }
 
