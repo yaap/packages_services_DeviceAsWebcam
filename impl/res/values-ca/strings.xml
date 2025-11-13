@@ -29,7 +29,7 @@
     <string name="hq_warning_dialog_content_1" msgid="4522581741851657138">"El mode Alta qualitat desactiva les optimitzacions de la bateria per millorar la qualitat de la càmera web. Fer servir aquest mode pot causar un consum de bateria significatiu que escalfi el dispositiu."</string>
     <string name="hq_warning_dialog_content_2" msgid="3916465225973908142"><b><u>"ADVERTIMENT:"</u></b>" l\'ús prolongat a altes temperatures pot tenir un efecte advers en l\'estat de la bateria d\'aquest dispositiu a llarg termini."</string>
     <string name="hq_warning_dialog_dont_show_again" msgid="7673771228725839758">"No ho tornis a mostrar"</string>
-    <string name="hq_warning_dialog_button_ack" msgid="613756451667553632">"Accepta"</string>
+    <string name="hq_warning_dialog_button_ack" msgid="613756451667553632">"Confirma"</string>
     <string name="list_item_text_back_camera" msgid="3350389854150173621">"Càmera posterior"</string>
     <string name="list_item_text_front_camera" msgid="3031661498601814899">"Càmera frontal"</string>
     <string name="list_item_text_standard_camera" msgid="2095831547376259596">"Càmera estàndard"</string>

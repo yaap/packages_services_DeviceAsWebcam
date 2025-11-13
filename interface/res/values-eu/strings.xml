@@ -17,7 +17,7 @@
 <resources xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     <string name="notif_channel_name" msgid="6360649882588343016">"Aurreko planoko zerbitzua"</string>
-    <string name="notif_ticker" msgid="6915460822395652567">"Web-kamera"</string>
-    <string name="notif_title" msgid="802425098359640082">"Web-kamera"</string>
-    <string name="notif_desc" msgid="2524105328454274946">"Sakatu hau web-kamerak grabatzen duena aurreikusteko eta konfiguratzeko"</string>
+    <string name="notif_ticker" msgid="6915460822395652567">"Webcama"</string>
+    <string name="notif_title" msgid="802425098359640082">"Webcama"</string>
+    <string name="notif_desc" msgid="2524105328454274946">"Sakatu hau webcamak grabatzen duena aurreikusteko eta konfiguratzeko"</string>
 </resources>
