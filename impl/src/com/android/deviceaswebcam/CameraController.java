@@ -237,7 +237,8 @@ public class CameraController {
                     mCaptureSession = cameraCaptureSession;
                     try {
                         mCaptureSession.setSingleRepeatingRequest(
-                                mPreviewRequestBuilder.build(), mCameraCallbacksExecutor,
+                                mPreviewRequestBuilder.build(),
+                                mCameraCallbacksExecutor,
                                 mCaptureCallback);
                     } catch (CameraAccessException e) {
                         Log.e(TAG, "setSingleRepeatingRequest failed", e);
@@ -248,6 +249,8 @@ public class CameraController {
                 @Override
                 public void onConfigureFailed(@NonNull CameraCaptureSession captureSession) {
                     Log.e(TAG, "Failed to configure CameraCaptureSession");
+                    mCaptureSession = null;
+                    mCaptureSessionReady.open();
                 }
             };
 
@@ -1369,35 +1372,39 @@ public class CameraController {
                 mUserPrefs.storeFrontCameraId(mFrontCameraId.toString());
             }
         }
-        mServiceEventsExecutor.execute(() -> {
-            synchronized (mSerializationLock) {
-                if (mCameraDevice == null) {
-                    // Its possible the preview screen is up before the camera device is opened.
-                    return;
-                }
-                mCaptureSession.close();
-                if (mCameraInfo != null) {
-                    mRotationProvider.updateSensorOrientation(mCameraInfo.getSensorOrientation(),
-                            mCameraInfo.getLensFacing());
-                }
-                switch (mCurrentState) {
-                    case WEBCAM_STREAMING:
-                        setupWebcamOnlyStreamAndOpenCameraLocked();
-                        break;
-                    case PREVIEW_STREAMING:
-                        // Preview size might change after toggling the camera.
-                        adjustPreviewOutputConfiguration();
-                        setupPreviewOnlyStreamLocked(mPreviewSurface);
-                        break;
-                    case PREVIEW_AND_WEBCAM_STREAMING:
-                        setupWebcamOnlyStreamAndOpenCameraLocked();
-                        // Preview size might change after toggling the camera.
-                        adjustPreviewOutputConfiguration();
-                        setupPreviewStreamAlongsideWebcamStreamLocked(mPreviewSurface);
-                        break;
-                }
-            }
-        });
+        mServiceEventsExecutor.execute(
+                () -> {
+                    synchronized (mSerializationLock) {
+                        if (mCameraDevice == null) {
+                            // Its possible the preview screen is up before the camera device is
+                            // opened.
+                            return;
+                        }
+                        if (mCaptureSession != null) {
+                            mCaptureSession.close();
+                        }
+
+                        if (mCameraInfo != null) {
+                            mRotationProvider.updateSensorOrientation(
+                                    mCameraInfo.getSensorOrientation(),
+                                    mCameraInfo.getLensFacing());
+                        }
+                        switch (mCurrentState) {
+                            case WEBCAM_STREAMING -> setupWebcamOnlyStreamAndOpenCameraLocked();
+                            case PREVIEW_STREAMING -> {
+                                // Preview size might change after toggling the camera.
+                                adjustPreviewOutputConfiguration();
+                                setupPreviewOnlyStreamLocked(mPreviewSurface);
+                            }
+                            case PREVIEW_AND_WEBCAM_STREAMING -> {
+                                setupWebcamOnlyStreamAndOpenCameraLocked();
+                                // Preview size might change after toggling the camera.
+                                adjustPreviewOutputConfiguration();
+                                setupPreviewStreamAlongsideWebcamStreamLocked(mPreviewSurface);
+                            }
+                        }
+                    }
+                });
     }
 
     /**

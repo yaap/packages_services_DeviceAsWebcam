@@ -27,7 +27,8 @@
             android:label="@string/app_label"
             android:theme="@style/ActivityTheme"
             android:singleUser="true"
-            android:windowSoftInputMode="stateAlwaysHidden">
+            android:windowSoftInputMode="stateAlwaysHidden"
+            android:exported="true">
         </activity>
 
         <service

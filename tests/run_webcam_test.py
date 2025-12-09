@@ -11,13 +11,17 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Runs the webcam verification test and reports the result to CTSVerifier"""
 
 import ast
+import io
 import logging
-import os
 import platform
+import re
 import subprocess
 import time
+
+from typing import NamedTuple
 
 from mobly import asserts
 from mobly import base_test
@@ -25,173 +29,322 @@ from mobly import test_runner
 from mobly.controllers import android_device
 
 
+class SdkVersion(NamedTuple):
+    """A class that represents the SDK version of the device."""
+
+    major: int  # The major SDK version of the device
+    minor: int  # The minor SDK version of the device
+
+
 class DeviceAsWebcamTest(base_test.BaseTestClass):
-  # Tests device as webcam functionality with Mobly base test class to run.
+    # Tests device as webcam functionality with Mobly base test class to run.
 
-  _ACTION_WEBCAM_RESULT = 'com.android.cts.verifier.camera.webcam.ACTION_WEBCAM_RESULT'
-  _WEBCAM_RESULTS = 'camera.webcam.extra.RESULTS'
-  _WEBCAM_TEST_ACTIVITY = 'com.android.cts.verifier/.camera.webcam.WebcamTestActivity'
-  # TODO(373791776): Find a way to discover PreviewActivity for vendors that change
-  # the webcam service.
-  _DAC_PREVIEW_ACTIVITY = 'com.android.DeviceAsWebcam/com.android.deviceaswebcam.DeviceAsWebcamPreview'
-  _ACTIVITY_START_WAIT = 1.5  # seconds
-  _ADB_RESTART_WAIT = 9  # seconds
-  _FPS_TOLERANCE = 0.15 # 15 percent
-  _RESULT_PASS = 'PASS'
-  _RESULT_FAIL = 'FAIL'
-  _RESULT_NOT_EXECUTED = 'NOT_EXECUTED'
-  _MANUAL_FRAME_CHECK_DURATION = 8  # seconds
-  _WINDOWS_OS = 'Windows'
-  _MAC_OS = 'Darwin'
-  _LINUX_OS = 'Linux'
+    _ACTION_WEBCAM_RESULT = (
+        'com.android.cts.verifier.camera.webcam.ACTION_WEBCAM_RESULT'
+    )
+    _WEBCAM_RESULTS = 'camera.webcam.extra.RESULTS'
+    _WEBCAM_TEST_ACTIVITY = (
+        'com.android.cts.verifier/.camera.webcam.WebcamTestActivity'
+    )
+    # TODO(373791776): Find a way to discover PreviewActivity for vendors that
+    # change the webcam service.
+    # pylint: disable-next=line-too-long
+    _DAC_PREVIEW_ACTIVITY = 'com.android.DeviceAsWebcam/com.android.deviceaswebcam.DeviceAsWebcamPreview'
+    _ACTIVITY_START_WAIT = 1.5  # seconds
+    _ADB_RESTART_WAIT = 9  # seconds
+    _FPS_TOLERANCE = 0.15  # 15 percent
+    _RESULT_PASS = 'PASS'
+    _RESULT_FAIL = 'FAIL'
+    _RESULT_FORCE_PASS = 'FORCE_PASS'
+    _RESULT_NOT_EXECUTED = 'NOT_EXECUTED'
+    _MANUAL_FRAME_CHECK_DURATION = 8  # seconds
+    _WINDOWS_OS = 'Windows'
+    _MAC_OS = 'Darwin'
+    _LINUX_OS = 'Linux'
+    _FORCE_PASS_SDK_VERSION = 36
+    _FORCE_PASS_SDK_VERSION_FULL = 202504
 
-  def run_os_specific_test(self):
-    """Runs the os specific webcam test script.
+    def get_full_sdk_version(self) -> SdkVersion:
+        """Gets and parses the full SDK version of the dut.
 
-    Returns:
-      A result list of tuples (tested_fps, actual_fps)
-    """
-    results = []
-    current_os = platform.system()
+        Returns:
+          An SdkVersion namedtuple (major, minor).
 
-    if current_os == self._WINDOWS_OS:
-      import windows_webcam_test
-      logging.info('Starting test on Windows')
-      # Due to compatibility issues directly running the windows
-      # main function, the results from the windows_webcam_test script
-      # are printed to the stdout and retrieved
-      output = subprocess.check_output(['python', 'windows_webcam_test.py'])
-      output_str = output.decode('utf-8')
-      results = ast.literal_eval(output_str.strip())
-    elif current_os == self._LINUX_OS:
-      import linux_webcam_test
-      logging.info('Starting test on Linux')
-      results = linux_webcam_test.main()
-    elif current_os == self._MAC_OS:
-      import mac_webcam_test
-      logging.info('Starting test on Mac')
-      results = mac_webcam_test.main()
-    else:
-      logging.info('Running on an unknown OS')
+        Raises:
+          ValueError: If the SDK version string from the device property
+            'ro.build.version.sdk_full' cannot be parsed.
+        """
+        sdk_full = self.dut.adb.getprop('ro.build.version.sdk_full')
+        logging.debug('ro.build.version.sdk_full: %s', sdk_full)
 
-    return results
+        match = re.fullmatch(r'(\d+)\.(\d+)', sdk_full)
+        if not match:
+            raise ValueError(
+                f'Failed to parse ro.build.version.sdk_full: {sdk_full}'
+            )
 
-  def validate_fps(self, results):
-    """Verifies the webcam FPS falls within the acceptable range of the tested FPS.
+        sdk_major = int(match.group(1))
+        sdk_minor = int(match.group(2))
+        logging.debug('sdk_major: %s; sdk_minor: %s', sdk_major, sdk_minor)
 
-    Args:
-        results: A result list of tuples (tested_fps, actual_fps)
+        return SdkVersion(sdk_major, sdk_minor)
 
-    Returns:
-        True if all FPS are within tolerance range, False otherwise
-    """
-    result = True
+    def run_os_specific_test(self):
+        """Runs the os specific webcam test script.
 
-    for elem in results:
-      tested_fps = elem[0]
-      actual_fps = elem[1]
+        Returns:
+          A result list of tuples (tested_fps, actual_fps)
+        """
+        results = []
+        current_os = platform.system()
 
-      max_diff = tested_fps * self._FPS_TOLERANCE
+        if current_os == self._LINUX_OS:
+            # pylint: disable-next=import-outside-toplevel
+            import linux_webcam_test
 
-      if abs(tested_fps - actual_fps) > max_diff:
-        logging.error('FPS is out of tolerance range! '
-                      ' Tested: %d Actual FPS: %d', tested_fps, actual_fps)
-        result = False
+            logging.info('Starting test on Linux')
+            results = linux_webcam_test.main(self.dut.serial)
+        elif current_os == self._WINDOWS_OS:
+            logging.warning(
+                'Webcam test on Windows is decrecated and will be removed '
+                'in a future release. If the test fails, please try running on '
+                'a Linux system before filing a bug or requesting exception.'
+            )
 
-    return result
+            logging.info('Starting test on Windows')
+            # Due to compatibility issues directly running the windows
+            # main function, the results from the windows_webcam_test script
+            # are printed to the stdout and retrieved
+            output = subprocess.check_output(
+                ['python', 'windows_webcam_test.py']
+            )
+            output_str = output.decode('utf-8')
+            results = ast.literal_eval(output_str.strip())
+        elif current_os == self._MAC_OS:
+            logging.warning(
+                'Webcam test on MacOS is deprecated and will be removed '
+                'in a future release. If the test fails, please try running on '
+                'a Linux system before filing a bug or requesting exception.'
+            )
+            # pylint: disable-next=import-outside-toplevel
+            import mac_webcam_test
 
-  def run_cmd(self, cmd):
-    """Replaces os.system call, while hiding stdout+stderr messages."""
-    with open(os.devnull, 'wb') as devnull:
-      subprocess.check_call(cmd.split(), stdout=devnull,
-                            stderr=subprocess.STDOUT)
+            logging.info('Starting test on Mac')
+            results = mac_webcam_test.main()
+        else:
+            logging.error('Running on an unknown OS')
 
-  def setup_class(self):
-    # Registering android_device controller module declares the test
-    # dependencies on Android device hardware. By default, we expect at least
-    # one object is created from this.
-    devices = self.register_controller(android_device, min_number=1)
-    self.dut = devices[0]
-    self.dut.adb.root()
+        return results
 
-  def test_webcam(self):
+    def validate_fps(self, results):
+        """Verifies the webcam FPS
 
-    adb = f'adb -s {self.dut.serial}'
+        Verifies that the webcam FPS falls within the acceptable range of the
+        tested FPS.
 
-    # Keep device on while testing since it requires a manual check on the
-    # webcam frames
-    # '7' is a combination of flags ORed together to keep the device on
-    # in all cases
-    self.dut.adb.shell(['settings', 'put', 'global',
-                        'stay_on_while_plugged_in', '7'])
+        Args:
+            results: A result list of tuples (tested_fps, actual_fps)
 
-    cmd = f"""{adb} shell am start {self._WEBCAM_TEST_ACTIVITY}
-        --activity-brought-to-front"""
-    self.run_cmd(cmd)
+        Returns:
+            True if all FPS are within tolerance range, False otherwise
+        """
+        result = True
 
-    # Check if webcam feature is enabled
-    dut_webcam_enabled = self.dut.adb.shell(['getprop', 'ro.usb.uvc.enabled'])
-    if 'true' in dut_webcam_enabled.decode('utf-8'):
-      logging.info('Webcam enabled, testing webcam')
-    else:
-      logging.info('Webcam not enabled, skipping webcam test')
+        for elem in results:
+            tested_fps = elem[0]
+            actual_fps = elem[1]
 
-      # Notify CTSVerifier test that the webcam test was skipped,
-      # the test will be marked as PASSED for this case
-      cmd = (f"""{adb} shell am broadcast -a
-          {self._ACTION_WEBCAM_RESULT} --es {self._WEBCAM_RESULTS}
-          {self._RESULT_NOT_EXECUTED}""")
-      self.run_cmd(cmd)
+            max_diff = tested_fps * self._FPS_TOLERANCE
 
-      return
+            if abs(tested_fps - actual_fps) > max_diff:
+                logging.error(
+                    'FPS is out of tolerance range!  Tested: %d Actual FPS: %d',
+                    tested_fps,
+                    actual_fps,
+                )
+                result = False
 
-    # Set USB preference option to webcam
-    set_uvc = self.dut.adb.shell(['svc', 'usb', 'setFunctions', 'uvc'])
-    if not set_uvc:
-      logging.error('USB preference option to set webcam unsuccessful')
+        return result
 
-      # Notify CTSVerifier test that setting webcam option was unsuccessful
-      cmd = (f"""{adb} shell am broadcast -a
-          {self._ACTION_WEBCAM_RESULT} --es {self._WEBCAM_RESULTS}
-          {self._RESULT_FAIL}""")
-      self.run_cmd(cmd)
-      return
+    def setup_class(self):
+        # Registering android_device controller module declares the test
+        # dependencies on Android device hardware. By default, we expect at
+        # least one object is created from this.
+        devices = self.register_controller(android_device, min_number=1)
+        self.dut = devices[0]
 
-    # After resetting the USB preference, adb disconnects
-    # and reconnects so wait for device
-    time.sleep(self._ADB_RESTART_WAIT)
+        # Keep device on while testing since it requires a manual check on the
+        # webcam frames
+        # '7' is a combination of flags ORed together to keep the device on
+        # in all cases
+        self.dut.adb.shell(
+            'settings put global stay_on_while_plugged_in 7'.split()
+        )
 
-    fps_results = self.run_os_specific_test()
-    logging.info('FPS test results (Expected, Actual): %s', fps_results)
-    result = self.validate_fps(fps_results)
+    def teardown_class(self):
+        self.dut.adb.shell(
+            'settings put global stay_on_while_plugged_in 0'.split()
+        )
+        return super().teardown_class()
 
-    test_status = self._RESULT_PASS
-    if not result or not fps_results:
-      logging.info('FPS testing failed')
-      test_status = self._RESULT_FAIL
+    def test_webcam(self):
+        # This test was broken until 25Q4, and passed unconditionally on user
+        # only builds. As we cannot break upgrading devices, this test
+        # will pass unconditionally on devices launching with Android 2025Q4
+        # or earlier.
+        vendor_api = int(self.dut.adb.getprop('ro.vendor.api_level'))
+        # vendor_api is either of the format YYYYMM or the Android SDK version
+        # number.
+        must_pass = vendor_api <= self._FORCE_PASS_SDK_VERSION or (
+            vendor_api > 100000
+            and vendor_api <= self._FORCE_PASS_SDK_VERSION_FULL
+        )
+        logging.debug('Vendor API: %s, Must Pass: %s', vendor_api, must_pass)
+        test_status = self._RESULT_PASS
+        try:
+            cmd = (
+                'am start'
+                f' {self._WEBCAM_TEST_ACTIVITY} --activity-brought-to-front'
+            )
+            self.dut.adb.shell(cmd.split())
 
-    # Send result to CTSVerifier test
-    time.sleep(self._ACTIVITY_START_WAIT)
-    cmd = (f"""{adb} shell am broadcast -a
-        {self._ACTION_WEBCAM_RESULT} --es {self._WEBCAM_RESULTS}
-        {test_status}""")
-    self.run_cmd(cmd)
+            # Set USB preference option to webcam
+            # 'handle_usb_disconnect' reinitializes any mobly specific services that
+            # may have been disrupted by the disconnection.
+            with self.dut.handle_usb_disconnect():
+                # Set USB preference option to webcam
+                # This assumes that uvc is supported by the device which is safe
+                # as the test should only be run if the device does indeed support
+                # uvc.
+                try:
+                    logging.info('Setting USB preference option to webcam')
+                    self.dut.adb.shell('svc usb setFunctions uvc'.split())
+                except android_device.adb.AdbError as e:
+                    # error code 255 may be returned because adb lost connection as
+                    # part of switching to UVC. Other error codes are unexpected.
+                    if e.ret_code != 255:
+                        # unhandled exception. crash and burn
+                        raise e
+                finally:
+                    # adb disconnects when changing usb function and reconnects
+                    # after a while. Wait for device to come back. Will throw a
+                    # AdbTimeoutError exception if adb does not recover in
+                    # _ADB_RESTART_WAIT seconds.
+                    self.dut.adb.wait_for_device(
+                        timeout=DeviceAsWebcamTest._ADB_RESTART_WAIT
+                    )
 
-    # Enable the webcam service preview activity for a manual
-    # check on webcam frames
-    cmd = f"""{adb} shell am start {self._DAC_PREVIEW_ACTIVITY}
-        --activity-no-history"""
-    self.run_cmd(cmd)
-    time.sleep(self._MANUAL_FRAME_CHECK_DURATION)
+            # Check if device came back with uvc mode active.
+            stderr = io.BytesIO()
+            stdout = self.dut.adb.shell(
+                'svc usb getFunctions'.split(), stderr=stderr
+            )
 
-    cmd = f"""{adb} shell am start {self._WEBCAM_TEST_ACTIVITY}
-        --activity-brought-to-front"""
-    self.run_cmd(cmd)
+            # For whatever reason, this call outputs to stderr instead of stdout
+            # despite there being no error. This will likely change in the future.
+            # For now, just check both stdout and stderr.
+            stderr = stderr.getvalue().decode('utf-8')
+            stdout = stdout.decode('utf-8')
+            if 'uvc' not in stdout and 'uvc' not in stderr:
+                logging.error('Could not switch to webcam mode')
 
-    asserts.assert_true(test_status == self._RESULT_PASS, 'Results: Failed')
+                # Notify CTSVerifier test that setting webcam option was
+                # unsuccessful
+                cmd = (
+                    f'am broadcast -a {self._ACTION_WEBCAM_RESULT} --es'
+                    f' {self._WEBCAM_RESULTS} {self._RESULT_FAIL}'
+                )
+                self.dut.adb.shell(cmd.split())
+                asserts.fail('Could not switch to webcam mode.')
 
-    self.dut.adb.shell(['settings', 'put',
-                        'global', 'stay_on_while_plugged_in', '0'])
+            fps_results = self.run_os_specific_test()
+            if not fps_results and not must_pass:
+                # Notify CTSVerifier that no fps tests were executed.
+                cmd = (
+                    f'am broadcast -a {self._ACTION_WEBCAM_RESULT} --es'
+                    f' {self._WEBCAM_RESULTS} {self._RESULT_FAIL}'
+                )
+                self.dut.adb.shell(cmd.split())
+                asserts.fail('Could not run webcam test. See logs for errors.')
+
+            logging.info('FPS test results (Expected, Actual): %s', fps_results)
+            result = self.validate_fps(fps_results)
+
+            if not result:
+                logging.error('FPS testing failed')
+                test_status = self._RESULT_FAIL
+
+            if not result and must_pass:
+                logging.warning(
+                    'Test failed but ignoring due to vendor freeze testing'
+                    ' guarantees. Please ensure that the webcam framerate is'
+                    ' acceptable to your users.'
+                )
+                test_status = self._RESULT_FORCE_PASS
+
+            # Send result to CTSVerifier test
+            time.sleep(self._ACTIVITY_START_WAIT)
+            cmd = (
+                f'am broadcast -a {self._ACTION_WEBCAM_RESULT} --es'
+                f' {self._WEBCAM_RESULTS} {test_status}'
+            )
+            self.dut.adb.shell(cmd.split())
+
+            sdk_version = self.get_full_sdk_version()
+            if sdk_version.major < 36 or (
+                sdk_version.major == 36 and sdk_version.minor < 1
+            ):
+                # DeviceAsWebcam does not export the preview activity before
+                # sdk 36.1. Attempting to start an unexported activity via ADB will
+                # cause a SecurityException. To prevent the test from crashing on
+                # older devices, skip pulling up the activity and instruct the
+                # user to manually verify the functionality.
+                logging.warning(
+                    'Skipping pulling up the webcam activity as it causes a '
+                    'SecurityException on older versions.'
+                )
+                logging.warning(
+                    'Please manually verify that the Webcam Preview activity is'
+                    ' working.'
+                )
+            else:
+                # Enable the webcam service preview activity for a manual
+                # check on webcam frames
+                cmd = (
+                    'am start'
+                    f' {self._DAC_PREVIEW_ACTIVITY} --activity-no-history'
+                )
+                self.dut.adb.shell(cmd.split())
+                time.sleep(self._MANUAL_FRAME_CHECK_DURATION)
+
+                cmd = (
+                    'am start'
+                    f' {self._WEBCAM_TEST_ACTIVITY} --activity-brought-to-front'
+                )
+                self.dut.adb.shell(cmd.split())
+        except Exception as e:
+            if must_pass:
+                logging.warning(
+                    'Test failed but ignoring due to vendor freeze testing'
+                    ' guarantees. Please ensure that the webcam framerate is'
+                    ' acceptable to your users.',
+                    exc_info=True,
+                )
+                test_status = self._RESULT_FORCE_PASS
+                cmd = (
+                    f'am broadcast -a {self._ACTION_WEBCAM_RESULT} --es'
+                    f' {self._WEBCAM_RESULTS} {test_status}'
+                )
+                self.dut.adb.shell(cmd.split())
+            else:
+                raise e
+
+        asserts.assert_true(
+            test_status == self._RESULT_PASS
+            or test_status == self._RESULT_FORCE_PASS,
+            'Results: Failed',
+        )
+
 
 if __name__ == '__main__':
-  test_runner.main()
+    test_runner.main()
