@@ -1,2 +1,12 @@
 package: "com.android.deviceaswebcam.flags"
 container: "system"
+
+flag {
+    namespace: "camera_platform"
+    name: "watch_v4l2_node_on_start"
+    description: "Enables watching for v4l2 node on start instead of looking for it immediately"
+    bug: "433613577"
+    metadata {
+        purpose: PURPOSE_BUGFIX
+    }
+}

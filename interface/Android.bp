@@ -11,6 +11,7 @@ android_library {
     ],
     static_libs: [
         "androidx.appcompat_appcompat",
+        "device_as_webcam_flags_java_lib",
     ],
     platform_apis: true,
     resource_dirs: [
